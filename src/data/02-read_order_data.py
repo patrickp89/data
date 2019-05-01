@@ -20,4 +20,5 @@ def read_order_data() -> pandas.DataFrame:
     # transform csv into data frame with the column names
     orderDataFileName = os.path.join(dirname, r'../../data/raw/orders/order_data.csv')
     df = pandas.read_csv(orderDataFileName, names = columnNames)
+    
     return df
