@@ -133,3 +133,5 @@ dmypy.json
 
 # RStudio files
 .Rhistory
+.Rproj.user
+data.Rproj

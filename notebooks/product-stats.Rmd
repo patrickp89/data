@@ -1,0 +1,6 @@
+---
+title: "Descriptive statistics for products"
+output: pdf_document
+---
+
+What is the most ordered product in the given data set?
