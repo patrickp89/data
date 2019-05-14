@@ -14,7 +14,7 @@ To figure this out we first load the data sets and choose all relevant columns:
 ```{r}
 partialOrdersDf <- orderDf[c("Order_Session_ID", "Product_Object_ID",
                              "Product_ID", "Order_Amount", "Order_Day_of_Week",
-                             "Product_Creation_Date")]
+                             "Product_Creation_Date", "Product_Family_ID")]
 
 partialClickstreamDf <- clickstreamDf[c("Session_ID", "Product_Object_ID",
                                         "Product_ID", "Request_Date")]
@@ -25,13 +25,11 @@ partialClickstreamDf <- clickstreamDf[c("Session_ID", "Product_Object_ID",
 partialOrdersDf$Order_Session_ID <- factor(partialOrdersDf$Order_Session_ID)
 partialOrdersDf$Product_Object_ID <- factor(partialOrdersDf$Product_Object_ID)
 partialOrdersDf$Product_ID <- factor(partialOrdersDf$Product_ID)
-#summary(partialOrdersDf)
+partialOrdersDf$Product_Family_ID <- factor(partialOrdersDf$Product_Family_ID)
 
-# force certain variables to be categorical:
 partialClickstreamDf$Session_ID <- factor(partialClickstreamDf$Session_ID)
 partialClickstreamDf$Product_Object_ID <- factor(partialClickstreamDf$Product_Object_ID)
 partialClickstreamDf$Product_ID <- factor(partialClickstreamDf$Product_ID)
-#summary(partialClickstreamDf)
 ```
 
 We then pick the 15 Product_IDs with the highest frequency count (which is introduced by dplyr as 'n') while
@@ -65,3 +63,39 @@ ggplot(data = mostClickedProductsDf) +
   geom_bar(mapping = aes(x = Product_ID, y = n), stat = "identity")
 ```
 Although the product with the ID 10315 is clicked more often than any other product, it is interestingly not the ordered most often.
+
+
+## What are the top-selling product families?
+A frequency count of all orders by their Product_Family_ID yields the top-selling product families:
+```{r}
+mostOrderedProductFamiliesDf <- partialOrdersDf %>%
+  count(Product_Family_ID) %>%
+  arrange(desc(n)) %>%
+  slice(1:15)
+head(mostOrderedProductFamiliesDf)
+```
+
+The winner clearly is product family 12295, which is also represented nicely in the corresponding plot:
+```{r}
+ggplot(data = mostOrderedProductFamiliesDf) +
+  geom_bar(mapping = aes(x = Product_Family_ID, y = n), stat = "identity")
+```
+
+
+## How are orders distributed among the different days of the week?
+To plot a frequency distribution of all orders over the days of week we first reorder the days in the
+canonical way and then do a count the usual way:
+```{r}
+dowDf <- partialOrdersDf %>%
+  mutate(Order_Day_of_Week = factor(Order_Day_of_Week, levels=c("Monday", "Tuesday", "Wednesday",
+                                                                "Thursday", "Friday", "Saturday",
+                                                                "Sunday"))) %>%
+  count(Order_Day_of_Week) %>%
+  slice(1:7)
+```
+
+We can then simply plot as before:
+```{r}
+ggplot(data = dowDf) +
+  geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity")
+```
