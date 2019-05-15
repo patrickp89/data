@@ -13,7 +13,7 @@ clickstreamDf <- read.csv(file="../data/interim/clickstream/clickstream_cleaned.
 To figure this out we first load the data sets and choose all relevant columns:
 ```{r}
 partialOrdersDf <- orderDf[c("Order_Session_ID", "Product_Object_ID",
-                             "Product_ID", "Order_Amount", "Order_Day_of_Week",
+                             "Product_ID", "Order_Line_Unit_List_Price", "Order_Day_of_Week",
                              "Product_Creation_Date", "Product_Family_ID")]
 
 partialClickstreamDf <- clickstreamDf[c("Session_ID", "Product_Object_ID",
@@ -98,4 +98,33 @@ We can then simply plot as before:
 ```{r}
 ggplot(data = dowDf) +
   geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity")
+```
+
+
+\pagebreak
+## Are certain product families bought more often on certain days of the week?
+To figure this out we plot the product Product_Family_ID vs. its frequency count (which is performed 'under the hood' by ggplot) and add the order day as a facet:
+```{r}
+ggplot(data = partialOrdersDf) +
+  geom_bar(mapping = aes(x = Product_Family_ID)) +
+  facet_wrap(~ Order_Day_of_Week)
+#TODO: only print the x most frequent product family IDs!
+```
+
+
+## What are the most and least expensice products?
+To find the most expensive product we can with the help of dplyr select the maximum as follows:
+```{r}
+partialOrdersDf %>%
+  filter(Order_Line_Unit_List_Price == max(Order_Line_Unit_List_Price)) %>%
+  distinct(Product_Object_ID, .keep_all = TRUE) %>%
+  select(Product_Object_ID, Order_Line_Unit_List_Price)
+```
+
+We can find the least expensive one by looking at the minimum respectively:
+```{r}
+partialOrdersDf %>%
+  filter(Order_Line_Unit_List_Price == min(Order_Line_Unit_List_Price)) %>%
+  distinct(Product_Object_ID, .keep_all = TRUE) %>%
+  select(Product_Object_ID, Order_Line_Unit_List_Price)
 ```
