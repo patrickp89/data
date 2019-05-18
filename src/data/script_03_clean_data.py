@@ -23,5 +23,5 @@ def clean_clickstream_data() -> pd.DataFrame:
     """ Reads and cleans the clickstream data. """
     return clean_file(r'data/interim/clickstream/clickstream_with_headers.csv')
 
-cdf = clean_clickstream_data()
-cdf.to_csv(r'/tmp/tmp_data.csv', encoding = 'latin-1')
+clean_clickstream_data().to_csv(r'data/interim/clickstream/clickstream_cleaned_py.csv', encoding = 'latin-1')
+clean_order_data().to_csv(r'data/interim/orders/orders_cleaned_py.csv', encoding = 'latin-1')
