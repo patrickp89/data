@@ -14,7 +14,7 @@ To figure this out we first load the data sets and choose all relevant columns:
 ```{r}
 partialOrdersDf <- orderDf[c("Order_Session_ID", "Product_Object_ID",
                              "Product_ID", "Order_Line_Unit_List_Price", "Order_Day_of_Week",
-                             "Product_Creation_Date", "Product_Family_ID")]
+                             "Product_Creation_Date", "Product_Family_ID", "Order_Amount")]
 
 partialClickstreamDf <- clickstreamDf[c("Session_ID", "Product_Object_ID",
                                         "Product_ID", "Request_Date")]
@@ -128,3 +128,27 @@ partialOrdersDf %>%
   distinct(Product_Object_ID, .keep_all = TRUE) %>%
   select(Product_Object_ID, Order_Line_Unit_List_Price)
 ```
+
+## What is the distribution of order amounts?
+```{r include=FALSE}
+library(ineq)
+```
+In order to visualize the distribution of order amounts we compute their Lorenz curve by running:
+```{r}
+lc <- Lc(orderDf$Order_Amount,
+         n = rep(1, length(orderDf$Order_Amount)),
+         plot = F)
+```
+
+```{r include=FALSE}
+p <- lc[1]
+L <- lc[2]
+lc <- data.frame(p,L)
+```
+And plot the cummulative percentages:
+```{r}
+ggplot(data = lc) +
+  geom_line(aes(x = p, y = L)) +
+  scale_y_continuous(name="% of order amounts", limits=c(0,1)) +
+  scale_x_continuous(name="% of orders", limits=c(0,1)) +
+  geom_abline()
