@@ -91,6 +91,7 @@ head(mostClickedProductsDf)
 Although the product with the ID 10315 is clicked more often than any other product, it is interestingly not ordered most often.
 
 
+\pagebreak
 ## What are the top-selling product families?
 A frequency count of all orders by their Product_Family_ID yields the top-selling product families:
 ```{r}
@@ -197,6 +198,40 @@ partialOrdersDf %>%
   group_by(Product_Family_ID) %>%
   summarize(average_price = mean(Order_Line_Unit_List_Price)) %>%
   ggplot(.) +
-#    geom_point(mapping = aes(x = Order_Line_Unit_List_Price, y = Product_Family_ID))
     geom_point(mapping = aes(x = average_price, y = Product_Family_ID))
+```
+
+
+\pagebreak
+## Unit price vs. creation date
+```{r}
+partialOrdersDf %>%
+  select(Product_ID, Order_Line_Unit_List_Price, Product_Creation_Date) %>%
+  mutate(Order_Line_Unit_List_Price = as.numeric(gsub("\\?", NA, Order_Line_Unit_List_Price))) %>%
+  mutate(Product_Creation_Date = as.Date(Product_Creation_Date, format="%Y-%m-%d")) %>%
+  drop_na() %>%
+  distinct(Product_ID, .keep_all = TRUE) %>%
+  ggplot(.) +
+    geom_point(mapping = aes(x = Order_Line_Unit_List_Price, y = Product_Creation_Date)) +
+    scale_y_date(date_breaks = "1 month", date_labels =  "%b %Y")
+```
+
+
+\pagebreak
+## Unit price vs. Product_ID vs. creation date (before or after 2000)
+```{r}
+partialOrdersDf %>%
+  mutate(Order_Line_Unit_List_Price = as.numeric(gsub("\\?", NA, Order_Line_Unit_List_Price))) %>%
+  mutate(Product_ID = gsub("\\?", NA, Product_ID)) %>%
+  mutate(Product_Creation_Date = as.Date(Product_Creation_Date, format="%Y-%m-%d")) %>%
+  mutate(Product_before_Feb_2000 = if_else(
+    Product_Creation_Date < as.Date("2000-02-01", format="%Y-%m-%d"), "before", "after")) %>%
+  mutate(Product_before_Feb_2000 = as.factor(Product_before_Feb_2000)) %>%
+  drop_na() %>%
+  distinct(Product_ID, .keep_all = TRUE) %>%
+  ggplot(.) +
+    geom_point(mapping = aes(x = Order_Line_Unit_List_Price,
+                             y = Product_ID,
+                             color = Product_before_Feb_2000)) +
+  theme(axis.text.y=element_blank())
 ```
