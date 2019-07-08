@@ -18,6 +18,22 @@ library(tidyr)
 
 # Plots
 
+# Comparison of Groups
+After loading the "experimental_results" dataset we decided to keep the first ID column.
+```{r loadexpdata, message=FALSE}
+experimentDf <- read.csv(file="../experiment/experimental_results.csv", sep=",", na.strings=c("NA"))
+partialExperimentDf <- experimentDf[c("id_",
+                                      "ranking_based",
+                                      "random_recommendations",
+                                      "profit_oriented",
+                                      "expectation")]
+
+names(partialExperimentDf)[1] <- "id"
+partialExperimentDf$id <- as.factor(partialExperimentDf$id)
+summary(partialExperimentDf)
+```
+
+
 # Models and Prediction
 To train our models and make predictions we have to load additional libraries:
 ```{r includse02, message=FALSE}
@@ -30,7 +46,7 @@ library(rpart.plot)
 ## Load Data and Recode Variables
 We first load the data and pick the columns that we are interested in:
 ```{r}
-orderDf <- read.csv(file="../data/interim/orders/orders_cleaned.csv", sep=",", na.strings=c("?","NA"))
+orderDf <- read.csv(file="../data/interim/orders/orders_cleaned.csv", sep=",", na.strings=c("?","NA", "NULL"))
 partialOrdersDf <- orderDf[c("Product_Family_ID",
                              "Order_Line_Day_of_Week",
                              "Order_Line_Hour_of_Day",
@@ -61,7 +77,7 @@ tree <- rpart(Product_Family_ID ~ Order_Line_Day_of_Week + Gender + Age,
               cp=0.00001)
 ```
 
-We than examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
+We then examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
 ```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error"}
 plotcp(tree)
 ```
@@ -72,20 +88,20 @@ prune(tree, cp=0.001) %>%
   prp(.)
 ```
 
-We next trained a model that predicts the amount of money a customer would spend in total. Again, we grew a tree which this time had a different response variable (Order Line Amount):
+Next we computed a linear regression model that helped us understand, how the different properties of customers affected the amount of money they would spend in total.
 ```{r}
 # enable cross validation and set the number of folds:
 ctrl <- trainControl(method = "cv",
                      number = 10)
 
 # preform a linear regression:
-# TODO: choose more (numerical) parameters (apart from Age)!!
-linreg1 <- train(Order_Line_Amount ~ Age,
+linreg1 <- train(Order_Line_Amount ~ Age + Gender,
                  data = partialOrdersDf,
                  trControl = ctrl,
                  na.action  = na.pass,
                  method = "lm")
 linreg1
+linreg1$finalModel
 ```
 
 # Summary
