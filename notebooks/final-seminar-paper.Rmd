@@ -25,13 +25,19 @@ experimentDf <- read.csv(file="../experiment/experimental_results.csv", sep=",",
 partialExperimentDf <- experimentDf[c("id_",
                                       "ranking_based",
                                       "random_recommendations",
-                                      "profit_oriented",
-                                      "expectation")]
+                                      "profit_oriented")]
 
 names(partialExperimentDf)[1] <- "id"
 partialExperimentDf$id <- as.factor(partialExperimentDf$id)
 summary(partialExperimentDf)
 ```
+
+We then compared the results of both the ranking-based as well as the profit-oriented recommender systems against the results of the baseline recommender system (that selects products randomly).
+```{r}
+t.test(partialExperimentDf$random_recommendations, partialExperimentDf$ranking_based)
+t.test(partialExperimentDf$random_recommendations, partialExperimentDf$profit_oriented)
+```
+The mean values (i.e. sales) of the profit-oriented recommender system and the baseline recommender system are not equal (p<0.00001), while the same hypothesis could not be rejected for the comparison of the ranking-based and the baseline recommender system (p=0.08). As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
 
 # Models and Prediction
