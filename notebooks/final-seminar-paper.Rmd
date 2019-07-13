@@ -6,24 +6,68 @@ output:
     toc: yes
     theme: spacelab
 ---
-```{r include=FALSE}
+```{r setRngSeed, echo=FALSE}
+# To always get (and report) the same cross-validation results (and any
+# other random-based things) we initialize the RNG with a fixed seed:
 set.seed(26769)
 ```
 
 # Data Manipulation
-```{r includse01, message=FALSE}
+```{r includes01, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(tidyverse)
 ```
+## Load Data and Recode Variables
+We first loaded the data, picked the columns that we were interested in, and forced some of the variables to be categorical.
+```{r pickColumnsForceCat01, echo=FALSE}
+orderDf <- read.csv(file="../data/interim/orders/orders_cleaned.csv", sep=",", na.strings=c("?","NA", "NULL"))
+partialOrdersDf <- orderDf[c("Product_Family_ID",
+                             "Order_Line_Day_of_Week",
+                             "Order_Line_Hour_of_Day",
+                             "Order_Line_Amount",
+                             "Product_ID",
+                             "Gender",
+                             "US_State",
+                             "Age",
+                             "Order_Day_of_Week")]
+
+partialOrdersDf$Product_Family_ID <- as.factor(partialOrdersDf$Product_Family_ID)
+partialOrdersDf$Order_Line_Day_of_Week <- as.factor(partialOrdersDf$Order_Line_Day_of_Week)
+partialOrdersDf$Order_Line_Hour_of_Day <- as.factor(partialOrdersDf$Order_Line_Hour_of_Day)
+partialOrdersDf$Gender <- as.factor(partialOrdersDf$Gender)
+partialOrdersDf$US_State <- as.factor(partialOrdersDf$US_State)
+partialOrdersDf$Age <- as.numeric(partialOrdersDf$Age)
+
+#partialOrdersDf$Order_Session_ID <- factor(partialOrdersDf$Order_Session_ID)
+#partialOrdersDf$Product_Object_ID <- factor(partialOrdersDf$Product_Object_ID)
+#partialOrdersDf$Product_ID <- factor(partialOrdersDf$Product_ID)
+#partialClickstreamDf$Session_ID <- factor(partialClickstreamDf$Session_ID)
+
+summary(partialOrdersDf)
+```
+
 
 # Summary Statistics
 
 # Plots
+Orders at ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the frequencies (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday.
+```{r orderDayBarPlot1, echo=FALSE, fig.cap="Distribution of orders among different days of the week"}
+partialOrdersDf %>%
+  mutate(Order_Day_of_Week = factor(Order_Day_of_Week, levels=c("Monday", "Tuesday", "Wednesday",
+                                                                "Thursday", "Friday", "Saturday",
+                                                                "Sunday"))) %>%
+  count(Order_Day_of_Week) %>%
+  slice(1:7) %>%
+ggplot(data = .) +
+  geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity")
+```
+
 
 # Comparison of Groups
-After loading the "experimental_results" dataset we decided to keep the first ID column.
-```{r loadexpdata, message=FALSE}
+After loading and examining the dataset containing ebuy's experiment results we picked all columns of interest (e.g. deciding to keep the first ID column only).
+```{r loadexpdata, echo=FALSE}
 experimentDf <- read.csv(file="../experiment/experimental_results.csv", sep=",", na.strings=c("NA"))
 partialExperimentDf <- experimentDf[c("id_",
                                       "ranking_based",
@@ -35,57 +79,28 @@ partialExperimentDf$id <- as.factor(partialExperimentDf$id)
 summary(partialExperimentDf)
 ```
 
-We then compared the results of both the ranking-based as well as the profit-oriented recommender systems against the results of the baseline recommender system (that selects products randomly).
-```{r}
+We then compared the results of both the ranking-based as well as the profit-oriented recommender systems against the results of the baseline recommender system (that selects products randomly). The mean values (i.e. sales) of the profit-oriented recommender system and the baseline recommender system are not equal (p<0.00001), while the same hypothesis could not be rejected for the comparison of the ranking-based and the baseline recommender system (p=0.08). As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
+```{r , echo=FALSE}
 t.test(partialExperimentDf$random_recommendations, partialExperimentDf$ranking_based)
 t.test(partialExperimentDf$random_recommendations, partialExperimentDf$profit_oriented)
 ```
-The mean values (i.e. sales) of the profit-oriented recommender system and the baseline recommender system are not equal (p<0.00001), while the same hypothesis could not be rejected for the comparison of the ranking-based and the baseline recommender system (p=0.08). As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
 
 # Models and Prediction
-To train our models and make predictions we have to load additional libraries:
-```{r includse02, message=FALSE}
+```{r includes02, message=FALSE}
 library(caret)
-library(tidyverse)
 library(rpart)
 library(rpart.plot)
 ```
 
-## Load Data and Recode Variables
-We first load the data and pick the columns that we are interested in:
-```{r}
-orderDf <- read.csv(file="../data/interim/orders/orders_cleaned.csv", sep=",", na.strings=c("?","NA", "NULL"))
-partialOrdersDf <- orderDf[c("Product_Family_ID",
-                             "Order_Line_Day_of_Week",
-                             "Order_Line_Hour_of_Day",
-                             "Order_Line_Amount",
-                             "Product_ID",
-                             "Gender",
-                             "US_State",
-                             "Age")]
-```
-
-Some of the variables have to be forced to be categorical:
-```{r}
-partialOrdersDf$Product_Family_ID <- as.factor(partialOrdersDf$Product_Family_ID)
-partialOrdersDf$Order_Line_Day_of_Week <- as.factor(partialOrdersDf$Order_Line_Day_of_Week)
-partialOrdersDf$Order_Line_Hour_of_Day <- as.factor(partialOrdersDf$Order_Line_Hour_of_Day)
-partialOrdersDf$Gender <- as.factor(partialOrdersDf$Gender)
-partialOrdersDf$US_State <- as.factor(partialOrdersDf$US_State)
-partialOrdersDf$Age <- as.numeric(partialOrdersDf$Age)
-summary(partialOrdersDf)
-```
-
-## Training the Model
-As ebuy's products fall into certain product families, we trained a model that allows to predict for a new customer from which product family he will purchase a product. We first grew a large tree with a complexity parameter of cp=0.00001 (i.e. splits had to decrease the lack of fit by a factor of 0.00001):
-```{r}
+## Training the Model{#subsection-ttm}
+As ebuy's products fall into certain product families, we trained a model that allows to predict for a new customer from which product family he will purchase a product. We first grew a large tree with a complexity parameter of cp=0.00001 (i.e. splits had to decrease the lack of fit by a factor of 0.00001).
+```{r modelTraining1, echo=FALSE}
 tree <- rpart(Product_Family_ID ~ Order_Line_Day_of_Week + Gender + Age,
               method="class",
               data=partialOrdersDf,
               cp=0.00001)
 ```
-
 We then examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
 ```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error"}
 plotcp(tree)
@@ -97,8 +112,8 @@ prune(tree, cp=0.0007) %>%
   prp(.)
 ```
 
-Next we computed a linear regression model that helped us understand, how the different properties of customers affected the amount of money they would spend in total.
-```{r}
+Next we computed a 10-fold cross-validated linear regression model that helped us understand, how the different properties of customers affected the amount of money they would spend in total.
+```{r linReg1, echo=FALSE}
 # enable cross validation and set the number of folds:
 ctrl <- trainControl(method = "cv",
                      number = 10)
@@ -112,6 +127,9 @@ linreg1 <- train(Order_Line_Amount ~ Age + Gender,
 linreg1
 linreg1$finalModel
 ```
+
+## Predictions
+With the models trained in \@ref(subsection-ttm) ebuy could predict the behaviour of futre customers.
 
 # Summary
 
