@@ -13,13 +13,16 @@ set.seed(26769)
 ```
 
 # Data Manipulation
-```{r includes01, message=FALSE}
+```{r includes01, echo=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(tidyverse)
+library(knitr)
+library(kableExtra)
 ```
-## Load Data and Recode Variables
+
+## Loading the Data and Recoding Variables
 We first loaded the data, picked the columns that we were interested in, and forced some of the variables to be categorical.
 ```{r pickColumnsForceCat01, echo=FALSE}
 orderDf <- read.csv(file="../data/interim/orders/orders_cleaned.csv", sep=",", na.strings=c("?","NA", "NULL"))
@@ -48,11 +51,32 @@ partialOrdersDf$Age <- as.numeric(partialOrdersDf$Age)
 summary(partialOrdersDf)
 ```
 
+## Cleaning the Data
 
-# Summary Statistics
 
-# Plots
-Orders at ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the frequencies (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday.
+# Basic Statistics and Graphs
+For ebuy it should be highly interesting to find out, which of their products and product families are the ones that sell best.
+```{r mostOrderedProductsTable, echo=FALSE}
+# TODO: these 2 tables do float, but are awkwardly close to the page borders --> center them!
+partialOrdersDf %>%
+  drop_na(Product_ID) %>%
+  count(Product_ID) %>%
+  arrange(desc(n)) %>%
+  slice(1:6) %>%
+  kable(.) %>%
+  kable_styling(full_width=FALSE, position="float_left")
+```
+```{r mostOrderedProductFamiliesTable, echo=FALSE}
+partialOrdersDf %>%
+  drop_na(Product_Family_ID) %>%
+  count(Product_Family_ID) %>%
+  arrange(desc(n)) %>%
+  slice(1:6) %>%
+  kable(.) %>%
+  kable_styling(full_width=FALSE, position="right")
+```
+
+Orders at ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case, we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the order frequencies against them (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday.
 ```{r orderDayBarPlot1, echo=FALSE, fig.cap="Distribution of orders among different days of the week"}
 partialOrdersDf %>%
   mutate(Order_Day_of_Week = factor(Order_Day_of_Week, levels=c("Monday", "Tuesday", "Wednesday",
@@ -87,7 +111,7 @@ t.test(partialExperimentDf$random_recommendations, partialExperimentDf$profit_or
 
 
 # Models and Prediction
-```{r includes02, message=FALSE}
+```{r includes02, echo=FALSE, message=FALSE}
 library(caret)
 library(rpart)
 library(rpart.plot)
@@ -129,7 +153,11 @@ linreg1$finalModel
 ```
 
 ## Predictions
-With the models trained in \@ref(subsection-ttm) ebuy could predict the behaviour of futre customers.
+Having trained the models in \@ref(subsection-ttm) ebuy could predict the purchasing behaviour of future customers. Given a previously unseen customer, ebuy could for instance now predict the product family which she is going to purchase from.
+```{r prediction1, eval=FALSE}
+predict(tree, unseenCustomer, type="class")
+```
+
 
 # Summary
 
