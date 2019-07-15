@@ -52,10 +52,42 @@ partialOrdersDf$Age <- as.numeric(partialOrdersDf$Age)
 summary(partialOrdersDf)
 ```
 
+```{r}
+clickstream_data <- read.csv(file="../data/interim/clickstream/clickstream_cleaned.csv", sep=",", na.strings=c("NA"))
+```
+
+
 ## Cleaning the Data
+TODO!
 
 
 # Summary Statistics
+## Clicks
+```{r summarytable1, echo=FALSE}
+
+table_data <- clickstream_data %>%
+  select(Request_Processing_Time, Request_Sequence, REQUEST_HOUR_OF_DAY) %>%
+  transmute(mean_RPT = mean(Request_Processing_Time), mean_RS = mean(Request_Sequence), mean_HOD = mean(REQUEST_HOUR_OF_DAY),
+            sd_RPT = sd(Request_Processing_Time), sd_RS = sd(Request_Sequence), sd_HOD = sd(REQUEST_HOUR_OF_DAY),
+            min_RPT = min(Request_Processing_Time), min_RS = min(Request_Sequence), min_HOD = min(REQUEST_HOUR_OF_DAY),
+            max_RPT = max(Request_Processing_Time), max_RS = max(Request_Sequence), max_HOD = max(REQUEST_HOUR_OF_DAY))
+
+table_data <- table_data[1,] %>%
+  gather("column", "mean", 1:3) %>%
+  gather("sd_data", "sd", 1:3) %>%
+  gather("min_data", "min", 1:3) %>%
+  gather("max_data", "max", 1:3) %>%
+  mutate(column = sapply(strsplit(column, "_"), "[", 2),
+         sd_data = sapply(strsplit(sd_data, "_"), "[", 2),
+         min_data = sapply(strsplit(min_data, "_"), "[", 2),
+         max_data = sapply(strsplit(max_data, "_"), "[", 2)) %>%
+  filter(column == sd_data & column == min_data & column == max_data) %>%
+  select(column, mean, sd, min, max)
+
+kable(table_data)
+```
+
+## Products
 For ebuy it should be highly interesting to find out, which of their products and product families are the ones that sell best.
 ```{r mostOrderedProductsTable, echo=FALSE}
 # TODO: these 2 tables do float, but are awkwardly close to the page borders --> center them!
@@ -89,42 +121,10 @@ ggplot(data = .) +
   geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity")
 ```
 
-```{r}
-clickstream_data <- read.csv(file="../data/interim/clickstream/clickstream_cleaned.csv", sep=",", na.strings=c("NA"))
-```
-
-## Clickstream
-
-```{r summarytable1, echo=FALSE}
-
-table_data <- clickstream_data %>%
-  select(Request_Processing_Time, Request_Sequence, REQUEST_HOUR_OF_DAY) %>%
-  transmute(mean_RPT = mean(Request_Processing_Time), mean_RS = mean(Request_Sequence), mean_HOD = mean(REQUEST_HOUR_OF_DAY),
-            sd_RPT = sd(Request_Processing_Time), sd_RS = sd(Request_Sequence), sd_HOD = sd(REQUEST_HOUR_OF_DAY),
-            min_RPT = min(Request_Processing_Time), min_RS = min(Request_Sequence), min_HOD = min(REQUEST_HOUR_OF_DAY),
-            max_RPT = max(Request_Processing_Time), max_RS = max(Request_Sequence), max_HOD = max(REQUEST_HOUR_OF_DAY))
-
-table_data <- table_data[1,] %>%
-  gather("column", "mean", 1:3) %>% 
-  gather("sd_data", "sd", 1:3) %>% 
-  gather("min_data", "min", 1:3) %>% 
-  gather("max_data", "max", 1:3) %>%
-  mutate(column = sapply(strsplit(column, "_"), "[", 2),
-         sd_data = sapply(strsplit(sd_data, "_"), "[", 2),
-         min_data = sapply(strsplit(min_data, "_"), "[", 2),
-         max_data = sapply(strsplit(max_data, "_"), "[", 2)) %>%
-  filter(column == sd_data & column == min_data & column == max_data) %>%
-  select(column, mean, sd, min, max)
-
-kable(table_data)
-  
-```
-
 
 # Plots
 
-## Clickstream
-
+## Clicks
 ```{r heatmap, echo=FALSE}
 
 
@@ -186,9 +186,8 @@ ggplot(data_requests_products) +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
 ```
 
-## What are the most popular brands for men and women?
-### Women
-
+## Products
+What are the most popular brands for men and women?
 ```{r include=FALSE}
 library(ggplot2)
 library(dplyr)
@@ -199,6 +198,7 @@ orders = orders %>% select(Customer_ID, Order_Line_Session_ID, Order_ID, Custome
 orders$Brand = unlist(lapply(orders$Product_Level_2_Path, FUN = function(path){return(str_match(path, "\\/.*\\/.*\\/(.*)")[,2])}))
 ```
 
+For Women:
 To get an overview over what brands your customers like the most we vizualized the popularity of the brands based on how often they get purchased.
 ```{r include= FALSE}
 mostPopularFemaleBrands = orders %>% 
@@ -221,7 +221,7 @@ ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), 
   labs(title = "Most Popular Female Brands", x = "Brand", y = "Number of Purchases")
 ```
 
-### Men
+For Men:
 ```{r include=FALSE}
 mostPopularMaleBrands = orders %>%
   filter(Gender == "Male") %>%
