@@ -78,10 +78,6 @@ ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), a
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1)
 
-# visualize CI
-ggplot(result, aes(x=Recommender, y=Mean, group=1)) +
-  geom_point(alpha=0.52) +
-  geom_errorbar(width=.1, aes(ymin=Mean-Ci, ymax=Mean+Ci), colour="darkred") + labs(x="Recommender",y= "Sales", title="Recommender Confidence Intervals")
 
 result <- group_by(recommender_to_sales, Recommender) %>%
   summarise(
@@ -92,10 +88,16 @@ result <- group_by(recommender_to_sales, Recommender) %>%
     CiMult = qt(0.975, Count-1),
     Ci = Se * CiMult
   )
-print(result)
+
+# visualize CI
+ggplot(result, aes(x=Recommender, y=Mean, group=1)) +
+  geom_point(alpha=0.52) +
+  geom_errorbar(width=.1, aes(ymin=Mean-Ci, ymax=Mean+Ci), colour="darkred") + labs(x="Recommender",y= "Sales", title="Recommender Confidence Intervals")
+
+
 
 # not normally distributed
-shapiro_wilk_profit <- with(recommender_to_sales, shapiro.test(Sales[Recommender == "profit_oriented"]))
+shapiro_wilk_profit <- with(recommender_to_sales, shapiro.test(Sales[Recommender == "profit_oriented"])) 
 shapiro_wilk_ranking <- with(recommender_to_sales, shapiro.test(Sales[Recommender == "ranking_based"]))
 
 # equality of variances
