@@ -361,7 +361,10 @@ summary(experimentDf)
 ```
 
 ## Broad Overview of Distributions
-```{r include=FALSE}
+
+When taking a broad look on the means and densities of the different recommender systems, you can clearly see that the profit-oriented recommender system has the highest mean sales with an average of 21.75€ per customer (see figure \@ref(fig:profitDensityAndMean)) in contrast to an average of  19€ per customer for the ranking-based recommender (\@ref(fig:rankingDensityAndMean)) and 18.50€ for the random recommender (see figure \@ref(fig:randomDensityAndMean)). It is also worth to mention that the density for the profit-based recommender system is pretty narrow (compare figure  \@ref(fig:profitDensityAndMean)), indicating a lower standard deviation and probably a tighter confidence interval than the other two wider distributions for the ranking-based (see figure \@ref(fig:rankingDensityAndMean)) and the random recommender systems (see figure \@ref(fig:randomDensityAndMean)).
+
+```{r recommenderSetup, include=FALSE}
 recommender_to_sales <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), c("Id", "Recommender", "Sales"))
 index <- 1
 for(row in 1:nrow(experimentDf)){
@@ -384,28 +387,30 @@ for(row in 1:nrow(experimentDf)){
 recommender_to_sales$Id <- NULL
 ```
 
-```{r echo=FALSE}
+```{r rankingDensityAndMean, echo=FALSE, fig.cap="Ranking-Based Recommender - Sales Density and Mean"}
 ggplot(recommender_to_sales %>% filter(Recommender=="ranking_based"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
-  labs(x="Sales",y= "Density", title="Ranking-Based Recommender: Sales Density and Mean")
+  labs(x="Sales",y= "Density")
 ```
 
-```{r echo=FALSE}
+```{r profitDensityAndMean, echo=FALSE, fig.cap="Profit-Oriented Recommender - Sales Density and Mean"}
 ggplot(recommender_to_sales %>% filter(Recommender=="profit_oriented"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
-  labs(x="Sales",y= "Density", title="Profit-Oriented Recommender: Sales Density and Mean")
+  labs(x="Sales",y= "Density")
 ```
 
-```{r echo=FALSE}
+```{r randomDensityAndMean, echo=FALSE, fig.cap="Random Recommender - Sales Density and Mean"}
 ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
-  labs(x="Sales",y= "Density", title="Random Recommender: Sales Density and Mean")
+  labs(x="Sales",y= "Density")
 ```
 
-```{r echo=FALSE}
+When taking a closer look at the confidence intervals of the different recommender systems (see figure \@ref(fig:confidenceIntervalsRecommenders)) you can clearly  see that the profit-based recommender systems shows the best performance and also has a very tight 95% confidence interval indicating high certainty in the amount of profit made from the recommender per customer. On the other side the confidence intervals for the profit-based recommender and the random recommender system are more wide and also overlap each other.
+
+```{r confidenceIntervalsRecommenders, echo=FALSE, fig.cap="Recommender Confidence Intervals"}
 result <- group_by(recommender_to_sales, Recommender) %>%
   summarise(
     Count = n(),
@@ -419,22 +424,23 @@ result <- group_by(recommender_to_sales, Recommender) %>%
 # visualize CI
 ggplot(result, aes(x=Recommender, y=Mean, group=1)) +
   geom_point(alpha=0.52) +
-  geom_errorbar(width=.1, aes(ymin=Mean-Ci, ymax=Mean+Ci), colour="darkred") + labs(x="Recommender System",y= "Sales", title="Recommender Confidence Intervals")
+  geom_errorbar(width=.1, aes(ymin=Mean-Ci, ymax=Mean+Ci), colour="darkred") + labs(x="Recommender System",y= "Sales")
 ```
 
-It seems like the profit-oriented recommender performs the best (mu=21.75) while the random recommender (mu=18.5) and the ranking based (mu=19.0) recommender seem to perform quite similar. Furthermore the confidence interval of the profit-oriented recommender is very narrow while the confidence interval of the ranking-based and random recommender system are wider and also overlap. Therefore we should definitely do a statisitcal test to prove if the means are significantly different or not. 
-We will first compare the profit-oriented and ranking-based recommender each with the random recommender to see if the recommenders perform significantly better than a random recommender. Before doing so we first check if the distributions of the recommenders are normally distributed so we can perform a t-test. In order to do so we used the Shapioro-Wilk normality test.
+Therefore we should definitely do a statisitcal test to prove if the means of the different recommender systems are significantly different from each other or not.
 
 ## Shapiro-Wilk Normality Test
+
+Before conducting a t-test to test if the profit means of the different recommender systems are significantly different from each other or not we will first check if their populations are normally distributed, which is a necessary precondition for conducting a t-test. In order to do so we used the Shapiro-Wilk normality test which tests the null-hypothesis that the population is normally distributed.
 
 ```{r echo = FALSE}
 with(recommender_to_sales, shapiro.test(Sales[Recommender == "profit_oriented"]))
 with(recommender_to_sales, shapiro.test(Sales[Recommender == "ranking_based"]))
 with(recommender_to_sales, shapiro.test(Sales[Recommender == "random_recommendations"]))
 ```
-All the p-values are smaller than the significance level of 0.05 which means that the distributions are not normally distributed. Therefore we used the Unpaired Two-Samples Wilcoxon test to compare the means of the different recommenders.
+It turns out that all the p-values are smaller than the significance level of 0.05 which means that we have to refuse the null-hypothesis which in turn implies that the distributions are not normally distributed. Therefore we used the Unpaired Two-Samples Wilcoxon Test (aka Mann-Whitney U Test) to test if the means of the different recommenders are equal or not. The Mann-Whitney U Test is an valid alternative to the t-test in szenarios in which the requirements for the t-test are not met and is widely used in practice.
 
-## Wilcoxon Test
+## Mann-Whitney U Test
 
 ```{r echo = FALSE}
 # perform wulxoc test
@@ -442,12 +448,13 @@ ranking_based_sales <- recommender_to_sales %>% filter(Recommender == "ranking_b
 profit_oriented_sales <- recommender_to_sales %>% filter(Recommender == "profit_oriented")
 random_recommendations_sales <- recommender_to_sales %>% filter(Recommender == "random_recommendations")
 
-wilcox.test(profit_oriented_sales$Sales, random_recommendations_sales$Sales, alternative = "two.sided")
 wilcox.test(ranking_based_sales$Sales, random_recommendations_sales$Sales, alternative = "two.sided")
-wilcox.test(profit_oriented_sales$Sales, ranking_based_sales$Sales, alternative = "two.sided")
+wilcox.test(profit_oriented_sales$Sales, random_recommendations_sales$Sales, alternative = "two.sided")
 ```
 
-We then compared the results of both the ranking-based as well as the profit-oriented recommender systems against the results of the baseline recommender system (that selects products randomly). We first compared the profit-oriented recommender to the random recommender (baseline recommender). The results of the tests show that the means of the both recommenders are not the same (p<0.00001). Surprisingly, the same hypothesis could not be rejected for the comparison of the ranking-based and the baseline recommender system (p=0.2008). As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
+We first tested if there is a significant difference in the means of the random recommender system and the ranking-based recommender system. Our earlier observations of the confidence intervals of the two recommenders revealed that their confidence intervals are both quite wide and also overlap at large parts (see figure \@ref(fig:confidenceIntervalsRecommenders)). The test now proves that in fact the both means of the two recommenders do not differ significantly (p = 0.2008 > 0.05).
+Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecommenders) already indicate that the means of the profit-based recommender is significantly different from the random recommender system we conducted a test for that. The result of the test proves our suggestions with an p-value less than 0.001.
+As the mean of the ranking-based recommender system has been shown to not differ significantly from the random recommendersystem we have to choose between the profit-oriented recommender system and the random recommender system. As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
 # Models and Prediction
 ```{r includes02, echo=FALSE, message=FALSE}
