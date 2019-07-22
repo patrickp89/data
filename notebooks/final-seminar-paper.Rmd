@@ -157,7 +157,41 @@ table_data <- table_data[1,] %>%
 kable(table_data)
 ```
 ## Customers
-TODO
+
+It is always important to know who your customers are when conducting a business. Therefore we looked at some of the most apparent properties of your customers. First we looked on how old ebuy's customers are. Your youngest customer is 18 years old while your oldest customer indeed is 98 years old. Although it is nice to see that there are some very old people who know how to operate a computer properly for ebuy it is more intersting to see that your average customer is in his/her mid 30's. Maybe ebuy should research what trends are emerging in this age segment so you can fit your offerings to your audience.
+
+```{r ageDistro, echo = FALSE}
+filtered = orderDfCleaned %>% 
+  na_if("?")  %>% 
+  distinct(Customer_ID, .keep_all = TRUE)
+
+summary(as.numeric(as.character(filtered$Age)))
+
+```
+
+When looking at the gender distribution in your customer base it is interesting to observe that most of your customers are women. Maybe ebuy should consider putting some marketing in place to attract more men to the platform or fully commit to only sell products for women.
+
+```{r genderDistro, echo = FALSE}
+filtered = orderDfCleaned %>%  na_if("NULL")  %>% distinct(Customer_ID, .keep_all = TRUE)
+summary(as.factor(as.character(filtered$Gender)))
+
+```
+
+Furthermore we was interested into how people get to know about ebuy and it turns out that most of ebuy's customers got aware of ebuy through they friends and family in the first place. It seems like ebuy is really dependent on mouth to mouth propaganda. E-mail advertisements are also working quite fine in generating new leads, whereas only a fraction of customers got interested into ebuy via print ads. Maybe ebuy should look closer into social media marketing and other types of modern marketing mechanisms if you want to get more independent from mouth to mouth propaganda which is hard to control although it is working fine for now.
+
+```{r howDidYouHearAboutUs, echo = FALSE}
+filtered = orderDfCleaned %>%  na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
+summary(as.factor(as.character(filtered$HowDidYouHearAboutUs)))
+
+```
+
+We also tried to get insight about how many of your customers are parents. If the share is high maybe it makes sense to also offer products for babies and young children since parents buy the clothing for their kinds until a specific age of the children. Maybe parents will just put a new pyjama for their kid in the basket while shopping a new dress for themselve. It turns out that indeed approximatively 40% of your  customers are parents.
+
+```{r presenceOfChildren, echo = FALSE}
+filtered = orderDfCleaned %>% na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
+summary(as.factor(as.logical(filtered$Presence_Of_Children)))
+
+```
 
 ## Products
 For ebuy it should be interesting to find out, which of their products and product families are the ones that sell best. The best selling product is a pair of socks from brand HOSO, their best selling product family has the ID 12295. Unfortunately the data does not provide any meaningful further details, what this product family is made of.
@@ -314,9 +348,9 @@ orders = orderDfCleaned %>%
 orders$Brand = unlist(lapply(orders$Product_Level_2_Path, FUN = function(path){return(str_match(path, "\\/.*\\/.*\\/(.*)")[,2])}))
 ```
 
-For Women:
-To get an overview over what brands your customers like the most we vizualized the popularity of the brands based on how often they get purchased.
-```{r include= FALSE}
+To get an overview over what brands your customers like the most we vizualized the popularity of the brands based on how many articles was bought from the brand. Hanes and American Essentials are the most popular brands among ebuy's female customers (compare figure \@ref(fig:brandsFemale)). Interestingly those are also the two most successful brands for men as you can see in figure \@ref(fig:brandsMale)) although men bought products from American Essential twice as often as from Hanes.
+
+```{r prepareBrandData, include= FALSE}
 mostPopularFemaleBrands = orders %>% 
   filter(Gender == "Female") %>%
   filter(!is.na(Brand)) %>%
@@ -326,18 +360,13 @@ mostPopularFemaleBrands = orders %>%
   head(10)
 ```
 
-```{r echo=FALSE}
-mostPopularFemaleBrands
-```
-
-```{r echo=FALSE}
+```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)"}
 ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) + 
   geom_bar(stat = "identity") +
   coord_flip() +
-  labs(title = "Most Popular Female Brands", x = "Brand", y = "Number of Purchases")
+  labs(x = "Brand", y = "Order Amount")
 ```
 
-For Men:
 ```{r include=FALSE}
 mostPopularMaleBrands = orders %>%
   filter(Gender == "Male") %>%
@@ -348,11 +377,11 @@ mostPopularMaleBrands = orders %>%
   head(10)
 ```
 
-```{r echo=FALSE}
+```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)"}
 ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) + 
   geom_bar(stat = "identity") +
   coord_flip() +
-  labs(title = "Most Popular Male Brands", x = "Brand", y = "Number of Purchases")
+  labs(x = "Brand", y = "Number of Purchases")
 ```
 
 ## Orders
