@@ -114,7 +114,7 @@ GDP_statistics <- GDP_statistics %>%
          State = sapply(strsplit(as.character(GeoFips..GeoName...2000.), ","), "[", 2),
          GDP = as.numeric(sapply(strsplit(as.character(GeoFips..GeoName...2000.), ","), "[", 3))) %>%
   mutate(State = str_remove_all(State, "\""))
-  
+
 ```
 
 
@@ -173,8 +173,8 @@ kable(table_data)
 It is always important to know who your customers are when conducting a business. Therefore we looked at some of the most apparent properties of your customers. First we looked on how old ebuy's customers are. Your youngest customer is 18 years old while your oldest customer indeed is 98 years old. Although it is nice to see that there are some very old people who know how to operate a computer properly for ebuy it is more intersting to see that your average customer is in his/her mid 30's. Maybe ebuy should research what trends are emerging in this age segment so you can fit your offerings to your audience.
 
 ```{r ageDistro, echo = FALSE}
-filtered = orderDfCleaned %>% 
-  na_if("?")  %>% 
+filtered = orderDfCleaned %>%
+  na_if("?")  %>%
   distinct(Customer_ID, .keep_all = TRUE)
 
 summary(as.numeric(as.character(filtered$Age)))
@@ -303,7 +303,7 @@ ggplot(data_requests_products) +
 ```
 
 To analyze how the average session on the Ebuy web site looks like, we look at the length of the session in two different ways: The first variable is the number of different pages visited during a single session. The second variable is the time between the first and the last request of the session. The scatterplot in figure \@ref(fig:sessionduration) shows how the sessions are distributed regarding the previously mentioned dimensions.
-The first observation is that generally speaking the average session duration in seconds increases with an increasing number of pages visited. This finding is to be expected for normal online shopping behavior. However, the average session duration becomes more scattered with higher pages visited. This can be explained with the fact that a smaller proportion of sessions shows a high amount of pages visited, making outliers more impactful to the average than in the 
+The first observation is that generally speaking the average session duration in seconds increases with an increasing number of pages visited. This finding is to be expected for normal online shopping behavior. However, the average session duration becomes more scattered with higher pages visited. This can be explained with the fact that a smaller proportion of sessions shows a high amount of pages visited, making outliers more impactful to the average than in the
 
 ```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics"}
   duration_data <- clickstream_data %>%
@@ -318,7 +318,7 @@ The first observation is that generally speaking the average session duration in
   group_by(Pages_Visited) %>%
   summarise(avg_Session_Duration = mean(Session_Duration), Session_Count = n_distinct(Session_ID)) %>%
   filter(Session_Count > 2 & Pages_Visited > 1)
-  
+
   ggplot(data = duration_data) +
   geom_point(aes(x = Pages_Visited, y = avg_Session_Duration, size = Session_Count)) +
   labs(x = "Pages Visited", y = "average Session Duration (seconds)", size = "Sessions",
@@ -331,7 +331,7 @@ The first observation is that generally speaking the average session duration in
 
 ### How is the sales volume distributed among customers?
 
-We wanted to know if there is maybe a little group of customers which is responsible for large parts of the overall spendings on ebuy. If this is the case it is probably important to focus on such a group as they are generating most of your revenue. Therefore we looked at how the spendings on ebuy are distributed among the customers. The lorenz curve in figure \@ref(fig:calculateMoneySpendPerCustomer) vizualizes this distribution. 
+We wanted to know if there is maybe a little group of customers which is responsible for large parts of the overall spendings on ebuy. If this is the case it is probably important to focus on such a group as they are generating most of your revenue. Therefore we looked at how the spendings on ebuy are distributed among the customers. The lorenz curve in figure \@ref(fig:calculateMoneySpendPerCustomer) vizualizes this distribution.
 As you can see the curve shows that the distribution of sales is not equally distributed among the customers. The curve's gini coefficient has a value of 0.46 indicating an very unequal distribution. Interestingly the upper ten percent of customers are responsible for approximately 42% of total sales. This tells us that indeed there is a  customer group which spends much more on ebuy than the remaining majority. We suggest that ebuy should look take attention on this group and foster their willingness to spend money on ebuy, maybe with exclusive offerings for royality customers.
 
 ```{r calculateMoneySpendPerCustomer, echo=FALSE, fig.cap="Lorenz Curve - Customer Spendings"}
@@ -344,14 +344,14 @@ lorenz_money_spent_per_customer_df <- data.frame(p=lorenz_money_spent_per_custom
 
 ggplot(data=lorenz_money_spent_per_customer_df) +
   geom_line(aes(x=p, y=L)) +
-  scale_x_continuous(name="Cumulative share of Customers", limits=c(0,1)) + 
+  scale_x_continuous(name="Cumulative share of Customers", limits=c(0,1)) +
   scale_y_continuous(name="Cumulative share of Spendings", limits=c(0,1)) +
   geom_abline(color = "grey")
 ```
 
 ### How are customer spendings distributed among the different brands?
 
-We also looked into whether people are spending their money equally for all brands or if spendings are focussed on a particular group of brands. The lorenz curve in figure \@ref(fig:lorenzBrandToSales) has a gini coefficient of 0.36 indicating a quite inequal distribution of sales to the respective brands. The upper 10 percent of brands are responsible for approximately 28% of generated sales while the lower 50 percent of the brands are only responsible for 21% of sales. Maybe ebuy should consider to boost some of the very successful brands because people tend to buy more of it. Ebuy could show new customers products of one of the successful brands when they first visit the ebuy page because they will more likely buy it which will in turn increase sales. In the following we will look into which are the most successful brands for men and women. 
+We also looked into whether people are spending their money equally for all brands or if spendings are focussed on a particular group of brands. The lorenz curve in figure \@ref(fig:lorenzBrandToSales) has a gini coefficient of 0.36 indicating a quite inequal distribution of sales to the respective brands. The upper 10 percent of brands are responsible for approximately 28% of generated sales while the lower 50 percent of the brands are only responsible for 21% of sales. Maybe ebuy should consider to boost some of the very successful brands because people tend to buy more of it. Ebuy could show new customers products of one of the successful brands when they first visit the ebuy page because they will more likely buy it which will in turn increase sales. In the following we will look into which are the most successful brands for men and women.
 
 ```{r lorenzBrandToSales, echo = FALSE, fig.cap="Lorenz Curve - Brand Spendings" }
 orders_with_brand <- orderDfCleaned
@@ -368,7 +368,7 @@ lorenz_money_spent_per_brand_df <- data.frame(p=lorenz_money_spent_per_brand$p, 
 
 ggplot(data=lorenz_money_spent_per_brand_df) +
   geom_line(aes(x=p, y=L)) +
-  scale_x_continuous(name="Cumulative share of Brands", limits=c(0,1)) + 
+  scale_x_continuous(name="Cumulative share of Brands", limits=c(0,1)) +
   scale_y_continuous(name="Cumulative share of Spendings", limits=c(0,1)) +
   geom_abline(color = "grey")
 ```
@@ -385,7 +385,7 @@ orders$Brand = unlist(lapply(orders$Product_Level_2_Path, FUN = function(path){r
 To get an overview over what brands your customers like the most we vizualized the popularity of the brands based on how many articles was bought from the brand. Hanes and American Essentials are the most popular brands among ebuy's female customers (compare figure \@ref(fig:brandsFemale)). Interestingly those are also the two most successful brands for men as you can see in figure \@ref(fig:brandsMale)) although men bought products from American Essential twice as often as from Hanes.
 
 ```{r prepareBrandData, include= FALSE}
-mostPopularFemaleBrands = orders %>% 
+mostPopularFemaleBrands = orders %>%
   filter(Gender == "Female") %>%
   filter(!is.na(Brand)) %>%
   group_by(Brand) %>%
@@ -395,7 +395,7 @@ mostPopularFemaleBrands = orders %>%
 ```
 
 ```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)"}
-ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) + 
+ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Order Amount")
@@ -412,7 +412,7 @@ mostPopularMaleBrands = orders %>%
 ```
 
 ```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)"}
-ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) + 
+ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Number of Purchases")
