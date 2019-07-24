@@ -195,33 +195,61 @@ It is always important to know who your customers are when conducting a business
 ```{r ageDistro, echo = FALSE}
 filtered = orderDfCleaned %>%
   na_if("?")  %>%
-  distinct(Customer_ID, .keep_all = TRUE)
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  mutate(Age = as.numeric(as.character(Age))) %>%
+  filter(!is.na(Age))
 
-summary(as.numeric(as.character(filtered$Age)))
+filtered %>% # start with data frame, and then ...
+    summarize_at(
+      .vars = c("Age"), # select variables that should be in the table
+      .funs = tibble::lst(min, max, mean, median, sd) # which summary statistics do you want?
+    )  %>% 
+    gather(Statistic, Value) %>% # transpose everything, and then ...
+    kable() %>%
+    kable_styling(full_width=FALSE)
 
 ```
 
 When looking at the gender distribution in your customer base it is interesting to observe that most of your customers are women. Maybe ebuy should consider putting some marketing in place to attract more men to the platform or fully commit to only sell products for women.
 
 ```{r genderDistro, echo = FALSE}
-filtered = orderDfCleaned %>%  na_if("NULL")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.character(filtered$Gender)))
+orderDfCleaned %>%  
+  na_if("NULL")  %>% 
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(Gender)) %>%
+  group_by(Gender) %>%
+  summarise(Count = n()) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
 Furthermore we was interested into how people get to know about ebuy and it turns out that most of ebuy's customers got aware of ebuy through they friends and family in the first place. It seems like ebuy is really dependent on mouth to mouth propaganda. E-mail advertisements are also working quite fine in generating new leads, whereas only a fraction of customers got interested into ebuy via print ads. Maybe ebuy should look closer into social media marketing and other types of modern marketing mechanisms if you want to get more independent from mouth to mouth propaganda which is hard to control although it is working fine for now.
 
 ```{r howDidYouHearAboutUs, echo = FALSE}
-filtered = orderDfCleaned %>%  na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.character(filtered$HowDidYouHearAboutUs)))
+orderDfCleaned %>%  
+  na_if("?")  %>% 
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(HowDidYouHearAboutUs)) %>%
+  group_by(HowDidYouHearAboutUs) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
 We also tried to get insight about how many of your customers are parents. If the share is high maybe it makes sense to also offer products for babies and young children since parents buy the clothing for their kinds until a specific age of the children. Maybe parents will just put a new pyjama for their kid in the basket while shopping a new dress for themselve. It turns out that indeed approximatively 40% of your  customers are parents.
 
 ```{r presenceOfChildren, echo = FALSE}
-filtered = orderDfCleaned %>% na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.logical(filtered$Presence_Of_Children)))
+orderDfCleaned %>% 
+  na_if("?") %>% 
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(Presence_Of_Children)) %>%
+  group_by(Presence_Of_Children) %>%
+  summarise(Count = n()) %>%
+  kable(col.names = c("Presence of Children", "Count")) %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
