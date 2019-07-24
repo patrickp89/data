@@ -42,7 +42,7 @@ include_graphics("images/wickham2017-data-science-explore.png")
 ```
 
 ## The Data
-Ebuy's data came separated into different files: files that contained the acutal observations and files that described the columns. We first joined the column names with their respective data sets and after examining the data we than proceeded to clean them. This included eliminating empty rows and columns, as well as renaming and forcing some of the variables to be categorical.
+Ebuy's data came separated into different files: files that contained the actual observations and files that described the columns. We first joined the column names with their respective data sets and after examining the data we than proceeded to clean them. This included eliminating empty rows and columns, as well as renaming and forcing some of the variables to be categorical. To get as much knowlegde out of the data as possible we tried to combine the order data with the clickstream data. Unfortunately there was no way to merge the two files thats why we could only analyze the files separately.
 ```{r unzipClickstream1, echo=FALSE, message=FALSE}
 # The first part of the clickstream data comes in a ZIP archive. We have to unzip it first.
 # This was done in 'src/data/script_01_unzip_data.sh' before. Its now part of this "big markdown file".
@@ -137,7 +137,11 @@ orderDfCleaned$US_State <- as.factor(orderDfCleaned$US_State)
 orderDfCleaned$Age <- as.numeric(orderDfCleaned$Age)
 ```
 
-# Summary Statistics
+## What we have done
+
+In our analysis of Ebuy's data we distiguised between different scopes of interest. You could also define these scopes as different views on the data. Namely we distinguished between the customers, the orders and the clicks. Each of these topics raises a lot of interesting questions which we tried to answer with your data as foundation. In [chapter 2](#summary-statistics) we first took a broad overview of what might be interesting in the data and raised some early hypotheses on how to improve Ebuy's business with that knowledge. We then analyzed the data in more depth and highlighted some very interesting observations in [chapter 3](#plots) which was all about visualization. For instance we looked at which states in the US generate the most traffic on your website, what the most popular brands on Ebuy are and which day of the week comes with the most orders. In [chapter 4](#ebuys-experiment) we then looked at the performance data of the three recommender systems you sent us some weeks ago. We came to the conclusion that one of the recommender systems is significantly better than the random recommender system while the other showed a very weak performance. Futhermore in [chapter 5](#models-and-predicitons) we tried to predict what a customer will buy based on some characteristics such as age and gender.
+
+# Summary Statistics {#summary-statistics}
 ## Clicks
 
 The data period contains data for 17 days. To get an overview over the clickstream data, we look at different measures in the data. The table below shows how many sessions and requests Ebuy's web site accumulated per day. The last measure is the average requests per session which makes it easier to compare the average session length between days. Apparently, the data sampling started on April 14th, 2000 in the late evening because there are only 37 requests in five sessions, while every other day generated at least 6800 requests.
@@ -290,7 +294,7 @@ orderDfCleaned %>%
 ```
 
 
-# Plots
+# Plots {#plots}
 ## Clicks
 ### How are the requests distributed geographically?
 
@@ -513,7 +517,7 @@ ggplot(data = lc) +
   geom_abline()
 ```
 
-# Ebuy's Experiment
+# Ebuy's Experiment {#ebuys-experiment}
 ## Data and Summary Statistics
 Ebuy's experiment provided us with data regarding different recommender systems. After loading and examining the dataset we picked all columns of interest (e.g. deciding to keep the first ID column only) and recoded the chosen ID column as a factor. We than calculated basic summary statistics, where the mean values where of most interest.
 ```{r loadexpdata, echo=FALSE}
@@ -621,7 +625,7 @@ wilcox.test(profit_oriented_sales$Sales, random_recommendations_sales$Sales, alt
 
 As the mean of the ranking-based recommender system has been shown to not differ significantly from the random recommendersystem we have to choose between the profit-oriented recommender system and the random recommender system. As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
-# Models and Prediction
+# Models and Prediction {#models-and-predicitons}
 ## Training the Model{#subsection-ttm}
 As ebuy's products fall into certain product families, we trained a model that allows to predict for a new customer from which product family he will purchase a product. We first grew a large tree with a complexity parameter of cp=0.00001 (i.e. splits had to decrease the lack of fit by a factor of 0.00001). We then examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
 ```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error", fig.align = 'center'}
