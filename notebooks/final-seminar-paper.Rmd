@@ -9,13 +9,14 @@ output:
     toc_depth: 2
     theme: spacelab
 ---
+
 ```{r setRngSeed, echo=FALSE}
 # To always get (and report) the same cross-validation results (and any
 # other random-based things) we initialize the RNG with a fixed seed:
 set.seed(26769)
 ```
 
-# Data Manipulation
+# Introduction
 ```{r includes01, echo=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
@@ -28,10 +29,20 @@ library(ineq)
 library(janitor)
 library(stringr)
 library(randomForest)
+library(caret)
+library(rpart)
+library(rpart.plot)
 ```
 
-## Loading the Data
-Ebuy's data came separated into different files: files that contained the acutal observations and files that described the columns. We first joined the column names with their respective data sets.
+## Our Approach
+In this report we analysed the data of ebuy, an online sales platform. We used the systematic approach from @wickhamGrolemund2017 of importing, tidying, exploring (transform, visualise, model), and communicating (figure \@ref(fig:wickham2017Explor) for data sets provided by ebuy itself.
+
+```{r wickham2017Explor, echo=FALSE, fig.cap="Grolemund and Wickham (2017): Data Exploration", fig.align = 'center'}
+include_graphics("images/wickham2017-data-science-explore.png")
+```
+
+## The Data
+Ebuy's data came separated into different files: files that contained the acutal observations and files that described the columns. We first joined the column names with their respective data sets and after examining the data we than proceeded to clean them. This included eliminating empty rows and columns, as well as renaming and forcing some of the variables to be categorical.
 ```{r unzipClickstream1, echo=FALSE, message=FALSE}
 # The first part of the clickstream data comes in a ZIP archive. We have to unzip it first.
 # This was done in 'src/data/script_01_unzip_data.sh' before. Its now part of this "big markdown file".
@@ -60,7 +71,6 @@ readdatawithcolumns <- function(headersFile, dataFile) {
 orderDf <- readdatawithcolumns(headersFile="../data/raw/orders/order_columns.txt",
                                dataFile="../data/raw/orders/order_data.csv")
 write.csv(orderDf, file="../data/interim/orders/orders_with_headers.csv", row.names=FALSE)
-# TODO: eliminate this write.csv()!
 
 # read the CLICKSTREAM:
 clickstreamDf1 <- readdatawithcolumns(headersFile="../data/raw/clickstream/clickstream_columns.txt",
@@ -71,8 +81,6 @@ clickstreamDf <- rbind(clickstreamDf1, clickstreamDf2)
 write.csv(clickstreamDf, file="../data/interim/clickstream/clickstream_with_headers.csv", row.names=FALSE)
 ```
 
-## Cleaning the Data
-After examining the data sets we than proceeded to clean them.
 ```{r cleaningTheData, echo=FALSE, message=FALSE}
 # This code chunk used to reside in 'src/data/script_03_clean_data.r'! Its now part of the "big markdown file".
 cleanFile <- function(filePath, threshold, keepColumns) {
@@ -118,8 +126,6 @@ orderDfCleaned <- cleanFile("../data/interim/orders/orders_with_headers.csv", 0.
 
 ```
 
-## Recoding Variables
-We first loaded the data, picked the columns that we were interested in, and forced some of the variables to be categorical.
 ```{r pickColumnsForceCat01, echo=FALSE}
 orderDfCleaned$Product_Family_ID <- as.factor(orderDfCleaned$Product_Family_ID)
 orderDfCleaned$Order_Line_Day_of_Week <- as.factor(orderDfCleaned$Order_Line_Day_of_Week)
@@ -448,7 +454,7 @@ orderDfCleaned %>%
 ```
 
 ### What is the distribution of order amounts?
-For an online shop like ebuy it might be of interest to identify those customers that place the vast majority of all orders. In order to visualize the distribution of order amounts we computed their Lorenz curve and plotted the cummulative percentages (figure \@ref(fig:orderTotalLc)).
+For an online shop like ebuy it might be of interest to identify those customers that place the vast majority of all orders. In order to visualize the distribution of order amounts we computed their Lorenz curve and plotted the cummulative percentages (figure \@ref(fig:orderTotalLc)). The curve shows a highly inequal distribution of order amounts: the lower 75% of all orders only account for roughly 25% of the total order amounts, while a quarter of all orders make up for three quarters of the sales total.
 ```{r orderTotalLc, echo=FALSE, fig.cap="Lorenz Curve: Distribution of order amounts", fig.align = 'center'}
 lc <- Lc(orderDfCleaned$Order_Amount,
          n = rep(1, length(orderDfCleaned$Order_Amount)),
@@ -464,7 +470,6 @@ ggplot(data = lc) +
   scale_x_continuous(name="% of orders", limits=c(0,1)) +
   geom_abline()
 ```
-
 
 # Ebuy's Experiment
 ## Data and Summary Statistics
@@ -574,12 +579,6 @@ Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecomme
 As the mean of the ranking-based recommender system has been shown to not differ significantly from the random recommendersystem we have to choose between the profit-oriented recommender system and the random recommender system. As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
 # Models and Prediction
-```{r includes02, echo=FALSE, message=FALSE}
-library(caret)
-library(rpart)
-library(rpart.plot)
-```
-
 ## Training the Model{#subsection-ttm}
 As ebuy's products fall into certain product families, we trained a model that allows to predict for a new customer from which product family he will purchase a product. We first grew a large tree with a complexity parameter of cp=0.00001 (i.e. splits had to decrease the lack of fit by a factor of 0.00001). We then examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
 ```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error", fig.align = 'center'}
@@ -596,6 +595,7 @@ To prevent over-fitting, @kabacoff2015 suggests to choose the leftmost cp value 
 prune(tree, cp=0.0007) %>%
   prp(., tweak = 1.5,)
 ```
+
 ```{r tree1Zoom1, echo=FALSE, fig.cap="Partially Enlarged Classification Tree", fig.align = 'center'}
 # The rpart package guesses (!) the font and line/node width and height based on your operation system's
 # resolution. This might cause prp() to render an ugly plot. We've chosen a "tweak" factor of 1.5 which produces
@@ -626,5 +626,7 @@ predict(tree, unseenCustomer, type="class")
 
 
 # Summary
+Ebuy's data provided a welcome opportunity to take a data scientific look at real world data. Using the techniques learnt we could examine interesting phenomena and problems from such data.
+
 
 # Literature
