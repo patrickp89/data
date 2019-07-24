@@ -451,7 +451,7 @@ mostPopularFemaleBrands = orders %>%
 ```
 
 ```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)", fig.align = 'center'}
-ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
+ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Order Amount")
@@ -468,7 +468,7 @@ mostPopularMaleBrands = orders %>%
 ```
 
 ```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)", fig.align = 'center'}
-ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
+ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Number of Purchases")
