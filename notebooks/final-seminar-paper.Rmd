@@ -393,6 +393,18 @@ ggplot(data=lorenz_money_spent_per_customer_df) +
   geom_abline(color = "grey")
 ```
 
+In the table below we looked at who exactly are your ten most profitable customers. The customer with ID 30208 is by far your most profitable customer having spend approximately twice as much money than thesecond most profitable customer with ID 29244. Ebuy should probably reward some of it's most spending customers to keep those customers active on the platform. It is intersting to see how the average price per item depends between the different customers ranging from an minimum of 6 Euro to a maximum of 36 Euro on average per item. Ebuy could utilize this knowledge to recommend customers with an high average price per item more costly items while showing more cheaper items to those customers who have spent less per item in the past.  
+
+```{r mostSpendingCustomersTable, echo=FALSE}
+orderDfCleaned %>%
+  group_by(Customer_ID) %>%
+  summarise(Total_Spendings = sum(Order_Line_Amount), Total_Item_Count = sum(Order_Line_Quantity), Average_Price_Per_Item = Total_Spendings/Total_Item_Count) %>%
+  arrange(desc(Total_Spendings)) %>%
+  head(10) %>% 
+  kable() %>%
+  kable_styling(full_width = FALSE)
+```
+
 ### How are customer spendings distributed among the different brands?
 
 We also looked into whether people are spending their money equally for all brands or if spendings are focussed on a particular group of brands. The lorenz curve in figure \@ref(fig:lorenzBrandToSales) has a gini coefficient of 0.36 indicating a quite inequal distribution of sales to the respective brands. The upper 10 percent of brands are responsible for approximately 28% of generated sales while the lower 50 percent of the brands are only responsible for 21% of sales. Maybe ebuy should consider to boost some of the very successful brands because people tend to buy more of it. Ebuy could show new customers products of one of the successful brands when they first visit the ebuy page because they will more likely buy it which will in turn increase sales. In the following we will look into which are the most successful brands for men and women.
