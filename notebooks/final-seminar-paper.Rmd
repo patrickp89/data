@@ -47,7 +47,9 @@ Ebuy's data came separated into different files: files that contained the acutal
 # The first part of the clickstream data comes in a ZIP archive. We have to unzip it first.
 # This was done in 'src/data/script_01_unzip_data.sh' before. Its now part of this "big markdown file".
 
-unzip("../data/raw/clickstream/clickstream_data.zip", exdir="../data/interim/clickstream/")
+unzip("../data/raw/clickstream/clickstream_data.zip", exdir=".")
+# Extrating to "../data/interim/clickstream/" works fine under Linux, but not under Windows (even
+# within a cygwin/gitbash shell)! Extracting to "." is ugly but gets the job done.
 ```
 
 ```{r loadingTheData, echo=FALSE, message=FALSE}
@@ -74,7 +76,7 @@ write.csv(orderDf, file="../data/interim/orders/orders_with_headers.csv", row.na
 
 # read the CLICKSTREAM:
 clickstreamDf1 <- readdatawithcolumns(headersFile="../data/raw/clickstream/clickstream_columns.txt",
-                                      dataFile="../data/interim/clickstream/clickstream_data.csv")
+                                      dataFile="./clickstream_data.csv")
 clickstreamDf2 <- readdatawithcolumns(headersFile="../data/raw/clickstream/clickstream_columns.txt",
                                       dataFile="../data/raw/clickstream/clickstream_data_part_2.csv")
 clickstreamDf <- rbind(clickstreamDf1, clickstreamDf2)
