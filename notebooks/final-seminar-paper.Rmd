@@ -35,7 +35,7 @@ library(rpart.plot)
 ```
 
 ## Our Approach
-In this report we analysed the data of ebuy, an online sales platform. We used the systematic approach from @wickhamGrolemund2017 of importing, tidying, exploring (transform, visualise, model), and communicating (figure \@ref(fig:wickham2017Explor) for data sets provided by ebuy itself.
+In this report we analysed the data of ebuy, an online sales platform. We used the systematic approach from @wickhamGrolemund2017 of importing, tidying, exploring (transform, visualise, model), and communicating (figure \@ref(fig:wickham2017Explor)) for a data set provided by ebuy itself.
 
 ```{r wickham2017Explor, echo=FALSE, fig.cap="Grolemund and Wickham (2017): Data Exploration", fig.align = 'center'}
 include_graphics("images/wickham2017-data-science-explore.png")
@@ -266,7 +266,7 @@ orderDfCleaned %>%
 
 Since all available clickstream data show requests from the US market, it is interesting to see how visitors from different US states behave on the web site. Figure \@ref(fig:heatmap) shows how many requests per US state have been recorded in the data time span. While the information of the figure is extremely useful, it has to be noted that `r format(round(100*sum(is.na(clickstream_data$US_State))/length(clickstream_data$US_State), 2), nsmall = 2)`% of the observations in the clickstream data do not include information about the state of the visitor. Still, `r sum(!is.na(clickstream_data$US_State))` entries contain the US state, making the plot meaningful.
 
-```{r heatmap, echo=FALSE, fig.cap="Heatmap of requests per US state", warning=FALSE}
+```{r heatmap, echo=FALSE, fig.cap="Heatmap of requests per US state", warning=FALSE, fig.align = 'center'}
 
 
 map_data <- clickstream_data %>%
@@ -302,7 +302,7 @@ data_requests_products <- clickstream_data %>%
 
 Another important information is which products are viewed most often. Figure \@ref(fig:requests) shows the distribution of requests per product. Although there are too many products to show the individual number of requests per product, it becomes clear that the requests are not equally distributed. The distribution has the form of a long-tail curve, meaning that a small portion of all products get a large proportion of the requests. The implications for Ebuy are that not all products can be treated equally. Ebuy should focus their marketing activities on products that are viewed more often in order to generate more profit. The most viewed product has product ID `r data_requests_products[order(data_requests_products$Request_Count, decreasing = TRUE),][1,1]` and was visited `r data_requests_products[order(data_requests_products$Request_Count, decreasing = TRUE),][2,1]` times. Compared with the IDs of the most bought products in \@ref(products_summary), it becomes apparent that the most viewed product is not the most bought one. Since it is the most viewed product, it has to be interesting for potential customers. Ebuy should investigate what keeps customers from buying that product because they are missing out on profit. Possible reasons for that could be that the price is too high and that customers can buy an equal product cheaper somewhere else, or that the presentation of the product on the web site is not appealing enough to convince visitors to buy it.
 
-```{r requests, echo = FALSE, fig.cap="Requests per product"}
+```{r requests, echo = FALSE, fig.cap="Requests per product", fig.align = 'center'}
 
 ggplot(data_requests_products) +
   geom_line(aes(x = reorder(Product_ID, desc(Request_Count)), y = Request_Count, group = 1)) +
@@ -321,7 +321,7 @@ The first observation is that generally speaking the average session duration in
 The second observation is that most visitors look at less than ten pages in a session. That shows that only a few visitors use Ebuy's web site to browse through different available products. Most visitors seem to have a clear goal when entering the site and only look at the product (and maybe a few alternative products) and then decide whether they buy that product or not. Ebuy could use improved advertisement (e.g. features like "Customers who bought this product also bought that product") to convince visitors to stay on their web site for longer and thus be more likely to buy more than one product.
 The previous finding could also indicate that there are many regular customers who always buy the same product and thus only stay on the web site for a short period of time since they know what product they want.
 
-```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics"}
+```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics", fig.align = 'center'}
   duration_data <- clickstream_data %>%
   select(Session_ID, Request_Sequence, Request_Date, Request_Date_Time, Session_First_Request_Date, Session_First_Request_Date_Time) %>%
   unite(col = "Request_Timestamp",c("Request_Date", "Request_Date_Time"), sep = " ", remove = TRUE) %>%
@@ -348,7 +348,7 @@ The previous finding could also indicate that there are many regular customers w
 We wanted to know if there is maybe a little group of customers which is responsible for large parts of the overall spendings on ebuy. If this is the case it is probably important to focus on such a group as they are generating most of your revenue. Therefore we looked at how the spendings on ebuy are distributed among the customers. The lorenz curve in figure \@ref(fig:calculateMoneySpendPerCustomer) vizualizes this distribution.
 As you can see the curve shows that the distribution of sales is not equally distributed among the customers. The curve's gini coefficient has a value of 0.46 indicating an very unequal distribution. Interestingly the upper ten percent of customers are responsible for approximately 42% of total sales. This tells us that indeed there is a  customer group which spends much more on ebuy than the remaining majority. We suggest that ebuy should look take attention on this group and foster their willingness to spend money on ebuy, maybe with exclusive offerings for royality customers.
 
-```{r calculateMoneySpendPerCustomer, echo=FALSE, fig.cap="Lorenz Curve - Customer Spendings"}
+```{r calculateMoneySpendPerCustomer, echo=FALSE, fig.cap="Lorenz Curve - Customer Spendings", fig.align = 'center'}
 money_spent_per_customer <- orderDfCleaned %>%
   group_by(Customer_ID) %>%
   summarise(Total_Spending = sum(Order_Line_Amount))
@@ -367,7 +367,7 @@ ggplot(data=lorenz_money_spent_per_customer_df) +
 
 We also looked into whether people are spending their money equally for all brands or if spendings are focussed on a particular group of brands. The lorenz curve in figure \@ref(fig:lorenzBrandToSales) has a gini coefficient of 0.36 indicating a quite inequal distribution of sales to the respective brands. The upper 10 percent of brands are responsible for approximately 28% of generated sales while the lower 50 percent of the brands are only responsible for 21% of sales. Maybe ebuy should consider to boost some of the very successful brands because people tend to buy more of it. Ebuy could show new customers products of one of the successful brands when they first visit the ebuy page because they will more likely buy it which will in turn increase sales. In the following we will look into which are the most successful brands for men and women.
 
-```{r lorenzBrandToSales, echo = FALSE, fig.cap="Lorenz Curve - Brand Spendings" }
+```{r lorenzBrandToSales, echo = FALSE, fig.cap="Lorenz Curve - Brand Spendings", fig.align = 'center'}
 orders_with_brand <- orderDfCleaned
 orders_with_brand$Brand = unlist(lapply(orderDfCleaned$Product_Level_2_Path, FUN = function(path){return(str_match(path, "\\/.*\\/.*\\/(.*)")[,2])}))
 
@@ -408,7 +408,7 @@ mostPopularFemaleBrands = orders %>%
   head(10)
 ```
 
-```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)"}
+```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)", fig.align = 'center'}
 ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
   geom_bar(stat = "identity") +
   coord_flip() +
@@ -425,7 +425,7 @@ mostPopularMaleBrands = orders %>%
   head(10)
 ```
 
-```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)"}
+```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)", fig.align = 'center'}
 ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
   geom_bar(stat = "identity") +
   coord_flip() +
@@ -509,21 +509,21 @@ for(row in 1:nrow(experimentDf)){
 recommender_to_sales$Id <- NULL
 ```
 
-```{r rankingDensityAndMean, echo=FALSE, fig.cap="Ranking-Based Recommender - Sales Density and Mean"}
+```{r rankingDensityAndMean, echo=FALSE, fig.cap="Ranking-Based Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="ranking_based"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
   labs(x="Sales",y= "Density")
 ```
 
-```{r profitDensityAndMean, echo=FALSE, fig.cap="Profit-Oriented Recommender - Sales Density and Mean"}
+```{r profitDensityAndMean, echo=FALSE, fig.cap="Profit-Oriented Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="profit_oriented"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
   labs(x="Sales",y= "Density")
 ```
 
-```{r randomDensityAndMean, echo=FALSE, fig.cap="Random Recommender - Sales Density and Mean"}
+```{r randomDensityAndMean, echo=FALSE, fig.cap="Random Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
@@ -532,7 +532,7 @@ ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), a
 
 When taking a closer look at the confidence intervals of the different recommender systems (see figure \@ref(fig:confidenceIntervalsRecommenders)) you can clearly  see that the profit-based recommender systems shows the best performance and also has a very tight 95% confidence interval indicating high certainty in the amount of profit made from the recommender per customer. On the other side the confidence intervals for the profit-based recommender and the random recommender system are more wide and also overlap each other.
 
-```{r confidenceIntervalsRecommenders, echo=FALSE, fig.cap="Recommender Confidence Intervals"}
+```{r confidenceIntervalsRecommenders, echo=FALSE, fig.cap="Recommender Confidence Intervals", fig.align = 'center'}
 result <- group_by(recommender_to_sales, Recommender) %>%
   summarise(
     Count = n(),
