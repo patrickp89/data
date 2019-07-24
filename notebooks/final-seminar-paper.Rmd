@@ -606,6 +606,9 @@ It turns out that all the p-values are smaller than the significance level of 0.
 
 ## Mann-Whitney U Test
 
+We first tested if there is a significant difference in the means of the random recommender system and the ranking-based recommender system. Our earlier observations of the confidence intervals of the two recommenders revealed that their confidence intervals are both quite wide and also overlap at large parts (see figure \@ref(fig:confidenceIntervalsRecommenders)). The test now proves that indeed the both means of the two recommender systems do not differ significantly (p = 0.2008 > 0.05).
+Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecommenders) already indicate that the means of the profit-based recommender is significantly different from the random recommender system we conducted a test for that to be completely sure. The result of the test proves our suggestions with an p-value less than 0.001.
+
 ```{r echo = FALSE}
 # perform wulxoc test
 ranking_based_sales <- recommender_to_sales %>% filter(Recommender == "ranking_based")
@@ -616,8 +619,6 @@ wilcox.test(ranking_based_sales$Sales, random_recommendations_sales$Sales, alter
 wilcox.test(profit_oriented_sales$Sales, random_recommendations_sales$Sales, alternative = "two.sided")
 ```
 
-We first tested if there is a significant difference in the means of the random recommender system and the ranking-based recommender system. Our earlier observations of the confidence intervals of the two recommenders revealed that their confidence intervals are both quite wide and also overlap at large parts (see figure \@ref(fig:confidenceIntervalsRecommenders)). The test now proves that in fact the both means of the two recommenders do not differ significantly (p = 0.2008 > 0.05).
-Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecommenders) already indicate that the means of the profit-based recommender is significantly different from the random recommender system we conducted a test for that. The result of the test proves our suggestions with an p-value less than 0.001.
 As the mean of the ranking-based recommender system has been shown to not differ significantly from the random recommendersystem we have to choose between the profit-oriented recommender system and the random recommender system. As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
 # Models and Prediction
