@@ -29,7 +29,7 @@ library(usmap)
 library(ineq)
 library(janitor)
 library(stringr)
-library(randomForest)
+library(car)
 library(caret)
 library(rpart)
 library(rpart.plot)
@@ -49,7 +49,7 @@ Ebuy's data came separated into different files: files that contained the actual
 # This was done in 'src/data/script_01_unzip_data.sh' before. Its now part of this "big markdown file".
 
 unzip("../data/raw/clickstream/clickstream_data.zip", exdir=".")
-# Extrating to "../data/interim/clickstream/" works fine under Linux, but not under Windows (even
+# Extracting to "../data/interim/clickstream/" works fine under Linux, but not under Windows (even
 # within a cygwin/gitbash shell)! Extracting to "." is ugly but gets the job done.
 ```
 
@@ -258,7 +258,7 @@ orderDfCleaned %>%
 
 ```
 
-## Products {#products-summary}
+## Orders {#products-summary}
 For Ebuy it should be interesting to find out, which of their products and product families are the ones that sell best. The best selling product is a pair of socks from brand HOSO, their best selling product family has the ID 12295. Unfortunately the data does not provide any meaningful further details, what this product family is made of.
 
 ```{r mostOrderedProductsAndProductFamilies, echo=FALSE}
@@ -295,6 +295,24 @@ orderDfCleaned %>%
   kable_styling(full_width=FALSE)
 ```
 
+When reasoning about what price tags to put on items in the future, Ebuy should take a look at what its customers are willing to pay today. Calculating the usual statistics for the two different types of order amounts stored in Ebuy's data we find an average order total between 6\$ and 25\$.
+```{r orderTotals, echo=FALSE}
+orderDfCleaned %>%
+  select(
+    "Order_Amount",
+    "Order_Line_Amount"
+  ) %>%
+  rename(
+    "Order Amount" = Order_Amount,
+    "Order Line Amount" = Order_Line_Amount
+  ) %>%
+  summarise_all(list(Min=min, Max=max, Median=median, Mean=mean), na.rm=TRUE) %>%
+  gather(key, value) %>%
+  separate(col=key, sep="_", c("Order Amount Type", "stat")) %>%
+  spread(key=stat, value=value) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
+```
 
 # Plots {#plots}
 ## Clicks
@@ -482,7 +500,7 @@ ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y 
 
 ## Orders
 ### Different order volumes on different days of the week?
-Orders at Ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case, we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the order frequencies against them (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday. In order to ramp up their sales on those days where sales are particulary low (Saturday, Sunday, Monday), Ebuy could for instance try to hand out (digital) coupons that are only valid on the weekend, therby hopefully increasing their sales figures.
+Orders at Ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case, we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the order frequencies against them (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday. In order to ramp up their sales on those days where sales are particulary low (Saturday, Sunday, Monday), Ebuy could for instance try to hand out (digital) coupons that are only valid on the weekend, thereby hopefully increasing their sales figures.
 ```{r orderDayBarPlot1, echo=FALSE, fig.cap="Distribution of orders among different days of the week", fig.align = 'center'}
 orderDfCleaned %>%
   mutate(
@@ -677,7 +695,6 @@ Next we computed a 10-fold cross-validated linear regression model that helped u
 ```{r linReg1, echo=FALSE}
 ctrl <- trainControl(method = "cv",
                      number = 10)
-
 linreg1 <- train(Order_Line_Amount ~ Age + Gender,
                  data = orderDfCleaned,
                  trControl = ctrl,
