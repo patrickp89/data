@@ -525,9 +525,27 @@ Ebuy's experiment provided us with data regarding different recommender systems.
 ```{r loadexpdata, echo=FALSE}
 experimentDf <- read.csv(file="../experiment/experimental_results.csv", sep=",", na.strings=c("NA"))
 experimentDf <- experimentDf[c("id_", "ranking_based", "random_recommendations", "profit_oriented")]
+
 names(experimentDf)[1] <- "id"
 experimentDf$id <- as.factor(experimentDf$id)
-summary(experimentDf)
+
+experimentDf %>%
+  select(
+    "ranking_based",
+    "random_recommendations",
+    "profit_oriented"
+  ) %>%
+  rename(
+    "Ranking-based" = ranking_based,
+    "Random recommendations" = random_recommendations,
+    "Profit-oriented" = profit_oriented
+  ) %>%
+  summarise_all(list(Min=min, Max=max, Median=median, Mean=mean), na.rm=TRUE) %>%
+  gather(key, value) %>%
+  separate(col=key, sep="_", c("Recommender system", "stat")) %>%
+  spread(key=stat, value=value) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
 ```
 
 ## Broad Overview of Distributions
