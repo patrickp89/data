@@ -270,7 +270,7 @@ findDistinctBrandname <- function(dataFrame, productId) {
   return(bn$BrandName)
 }
 
-topSellingProducts <- orderDfCleaned %>%
+orderDfCleaned %>%
   select(Product_ID, BrandName) %>%
   drop_na(Product_ID) %>%
   count(Product_ID) %>%
@@ -278,9 +278,8 @@ topSellingProducts <- orderDfCleaned %>%
   rowwise() %>%
   mutate(
     brandName = findDistinctBrandname(orderDfCleaned, Product_ID)
-  )
-
-topSellingProducts %>%
+  ) %>%
+  rename("Product ID"=Product_ID, "Brand Name"=brandName, "Total Sales"=n) %>%
   slice(1:5) %>%
   kable(.) %>%
   kable_styling(full_width=FALSE)
@@ -289,6 +288,7 @@ orderDfCleaned %>%
   drop_na(Product_Family_ID) %>%
   count(Product_Family_ID) %>%
   arrange(desc(n)) %>%
+  rename("Product Family ID"=Product_Family_ID, "Total Sales"=n) %>%
   slice(1:5) %>%
   kable(.) %>%
   kable_styling(full_width=FALSE)
@@ -495,10 +495,10 @@ orderDfCleaned %>%
       "Sunday"))
     ) %>%
   count(Order_Day_of_Week) %>%
-# TODO:  rename(Order_Day_of_Week = "Day of Week") %>%
   slice(1:7) %>%
   ggplot(data = .) +
-    geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity")
+    geom_bar(mapping = aes(x = Order_Day_of_Week, y = n), stat = "identity") +
+    labs(x = "Day of Week", y = "Order Volume")
 ```
 
 ### What is the distribution of order amounts?
