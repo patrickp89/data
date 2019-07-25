@@ -54,8 +54,11 @@ unzip("../data/raw/clickstream/clickstream_data.zip", exdir=".")
 ```
 
 ```{r loadingTheData, echo=FALSE, message=FALSE}
-# This code chunk used to reside in 'src/data/script_02_join_data_with_column_names.r'! Its now part of
-# the "big markdown file".
+
+# README: This code chunk used to reside in 'src/data/script_02_join_data_with_column_names.r'! Its now part of
+# the "big markdown file". There also is a corresponding Python script 'src/data/script_02_join_data_with_column_names.py'
+# that does the same thing but is not featured in this report!
+
 readdatawithcolumns <- function(headersFile, dataFile) {
     message("Reading headers...")
     tmpHeaderNames <- read.csv(file=headersFile, sep=":", header=FALSE)
@@ -85,7 +88,11 @@ write.csv(clickstreamDf, file="../data/interim/clickstream/clickstream_with_head
 ```
 
 ```{r cleaningTheData, echo=FALSE, message=FALSE}
-# This code chunk used to reside in 'src/data/script_03_clean_data.r'! Its now part of the "big markdown file".
+
+# README: This code chunk used to reside in 'src/data/script_03_clean_data.r'! Its now part of the "big markdown file".
+#There also is a corresponding Python script 'src/data/script_03_clean_data.py'
+# that does the same thing but is not featured in this report!
+
 cleanFile <- function(filePath, threshold, keepColumns) {
   message(sprintf("Loading file from %s.", filePath))
   df <- read.csv(file=filePath, header=TRUE, na.strings = c("?", "NA", "NULL"))
@@ -126,7 +133,9 @@ cleanFile <- function(filePath, threshold, keepColumns) {
 clickstream_data <- cleanFile("../data/interim/clickstream/clickstream_with_headers.csv", 0.85, c("US_State", "Customer_ID"))
 orderDfCleaned <- cleanFile("../data/interim/orders/orders_with_headers.csv", 0.85, c())
 
-
+# README: There is both an R ('src/data/script_004_join_data_sets.r') as well as a Python script
+# ('src/data/script_004_join_data_sets.py') for joining the two data sets. Unfourtunately, joining
+# didn't work - there simly was not a single matching tuple!
 ```
 
 ```{r pickColumnsForceCat01, echo=FALSE}
@@ -375,7 +384,7 @@ The first observation was that generally speaking the average session duration i
 The second observation was that most visitors looked at less than ten pages in a session. That showed that only a few visitors used Ebuy's web site to browse through different available products. Most visitors seem to have had a clear goal when entering the site and only looked at the product (and maybe a few alternative products) and then decided whether they buy that product or not. Ebuy could use improved advertisement (e.g. features like "Customers who bought this product also bought that product") to convince visitors to stay on their web site for longer and thus be more likely to buy more than one product.
 The previous finding could also indicate that there were many regular customers who always bought the same product and thus only stayed on the web site for a short period of time since they knew what product they wanted.
 
-```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics", fig.align = 'center', eval=FALSE}
+```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics", fig.align = 'center'}
   duration_data <- clickstream_data %>%
   select(Session_ID, Request_Sequence, Request_Date, Request_Date_Time, Session_First_Request_Date, Session_First_Request_Date_Time) %>%
   unite(col = "Request_Timestamp",c("Request_Date", "Request_Date_Time"), sep = " ", remove = TRUE) %>%
