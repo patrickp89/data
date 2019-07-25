@@ -1,5 +1,7 @@
 ---
 title: "Data analysis: ebuy's sales data"
+author: "Group 3: Julius Braun (xxxxxxx), Patrick Preuß (5813166), Paul Schütz (xxxxxxx)"
+date: "July 2019"
 bibliography: "bibliographies/literature.bib"
 output:
   bookdown::html_document2:
@@ -7,13 +9,14 @@ output:
     toc_depth: 2
     theme: spacelab
 ---
+
 ```{r setRngSeed, echo=FALSE}
 # To always get (and report) the same cross-validation results (and any
 # other random-based things) we initialize the RNG with a fixed seed:
 set.seed(26769)
 ```
 
-# Data Manipulation
+# Introduction
 ```{r includes01, echo=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
@@ -25,13 +28,33 @@ library(usmap)
 library(ineq)
 library(janitor)
 library(stringr)
-library(ineq)
+library(randomForest)
+library(caret)
+library(rpart)
+library(rpart.plot)
 ```
 
-## Loading the Data
-Ebuy's data came separated into different files: files that contained the acutal observations and files that described the columns. We first joined the column names with their respective data sets.
+## Our Approach
+In this report we analysed the data of ebuy, an online sales platform. We used the systematic approach from @wickhamGrolemund2017 of importing, tidying, exploring (transform, visualise, model), and communicating (figure \@ref(fig:wickham2017Explor)) for a data set provided by ebuy itself.
+
+```{r wickham2017Explor, echo=FALSE, fig.cap="Grolemund and Wickham (2017): Data Exploration", fig.align = 'center'}
+include_graphics("images/wickham2017-data-science-explore.png")
+```
+
+## The Data
+Ebuy's data came separated into different files: files that contained the actual observations and files that described the columns. We first joined the column names with their respective data sets and after examining the data we than proceeded to clean them. This included eliminating empty rows and columns, as well as renaming and forcing some of the variables to be categorical. To get as much knowlegde out of the data as possible we tried to combine the order data with the clickstream data. Unfortunately there was no way to merge the two files thats why we could only analyze the files separately.
+```{r unzipClickstream1, echo=FALSE, message=FALSE}
+# The first part of the clickstream data comes in a ZIP archive. We have to unzip it first.
+# This was done in 'src/data/script_01_unzip_data.sh' before. Its now part of this "big markdown file".
+
+unzip("../data/raw/clickstream/clickstream_data.zip", exdir=".")
+# Extrating to "../data/interim/clickstream/" works fine under Linux, but not under Windows (even
+# within a cygwin/gitbash shell)! Extracting to "." is ugly but gets the job done.
+```
+
 ```{r loadingTheData, echo=FALSE, message=FALSE}
-# This code chunk used to reside in 'script_02_join_data_with_column_names.r'! Its now part of the "big markdown file".
+# This code chunk used to reside in 'src/data/script_02_join_data_with_column_names.r'! Its now part of
+# the "big markdown file".
 readdatawithcolumns <- function(headersFile, dataFile) {
     message("Reading headers...")
     tmpHeaderNames <- read.csv(file=headersFile, sep=":", header=FALSE)
@@ -49,28 +72,22 @@ readdatawithcolumns <- function(headersFile, dataFile) {
 # read the ORDER data:
 orderDf <- readdatawithcolumns(headersFile="../data/raw/orders/order_columns.txt",
                                dataFile="../data/raw/orders/order_data.csv")
-#write.csv(orderDf, file="data/interim/orders/orders_with_headers.csv", row.names=FALSE)
-message("Done!")
+write.csv(orderDf, file="../data/interim/orders/orders_with_headers.csv", row.names=FALSE)
 
 # read the CLICKSTREAM:
 clickstreamDf1 <- readdatawithcolumns(headersFile="../data/raw/clickstream/clickstream_columns.txt",
-                                      dataFile="../data/interim/clickstream/clickstream_data.csv")
+                                      dataFile="./clickstream_data.csv")
 clickstreamDf2 <- readdatawithcolumns(headersFile="../data/raw/clickstream/clickstream_columns.txt",
                                       dataFile="../data/raw/clickstream/clickstream_data_part_2.csv")
 clickstreamDf <- rbind(clickstreamDf1, clickstreamDf2)
-
-#write.csv(clickstreamDf, file="data/interim/clickstream/clickstream_with_headers.csv", row.names=FALSE)
-message("Done!")
+write.csv(clickstreamDf, file="../data/interim/clickstream/clickstream_with_headers.csv", row.names=FALSE)
 ```
 
-## Cleaning the Data
-After examining the data sets we than proceeded to clean them.
 ```{r cleaningTheData, echo=FALSE, message=FALSE}
-# This code chunk used to reside in 'script_03_clean_data.r'! Its now part of the "big markdown file".
+# This code chunk used to reside in 'src/data/script_03_clean_data.r'! Its now part of the "big markdown file".
 cleanFile <- function(filePath, threshold, keepColumns) {
   message(sprintf("Loading file from %s.", filePath))
   df <- read.csv(file=filePath, header=TRUE, na.strings = c("?", "NA", "NULL"))
-  # TODO: why does ', na.strings=c("?","NA", "NULL")' not work here?
 
   message("Cleaning data.")
   message("1. Removing empty rows and columns.")
@@ -111,33 +128,20 @@ orderDfCleaned <- cleanFile("../data/interim/orders/orders_with_headers.csv", 0.
 
 ```
 
-
-## Recoding Variables
-We first loaded the data, picked the columns that we were interested in, and forced some of the variables to be categorical.
 ```{r pickColumnsForceCat01, echo=FALSE}
-partialOrdersDf <- orderDfCleaned[c("Product_Family_ID",
-                             "Order_Line_Day_of_Week",
-                             "Order_Line_Hour_of_Day",
-                             "Order_Line_Amount",
-                             "Product_ID",
-                             "Gender",
-                             "US_State",
-                             "Age",
-                             "Order_Day_of_Week",
-                             "BrandName",
-                             "Order_Amount")]
-
-partialOrdersDf$Product_Family_ID <- as.factor(partialOrdersDf$Product_Family_ID)
-partialOrdersDf$Order_Line_Day_of_Week <- as.factor(partialOrdersDf$Order_Line_Day_of_Week)
-partialOrdersDf$Order_Line_Hour_of_Day <- as.factor(partialOrdersDf$Order_Line_Hour_of_Day)
-partialOrdersDf$Gender <- as.factor(partialOrdersDf$Gender)
-partialOrdersDf$US_State <- as.factor(partialOrdersDf$US_State)
-partialOrdersDf$Age <- as.numeric(partialOrdersDf$Age)
-
-summary(partialOrdersDf)
+orderDfCleaned$Product_Family_ID <- as.factor(orderDfCleaned$Product_Family_ID)
+orderDfCleaned$Order_Line_Day_of_Week <- as.factor(orderDfCleaned$Order_Line_Day_of_Week)
+orderDfCleaned$Order_Line_Hour_of_Day <- as.factor(orderDfCleaned$Order_Line_Hour_of_Day)
+orderDfCleaned$Gender <- as.factor(orderDfCleaned$Gender)
+orderDfCleaned$US_State <- as.factor(orderDfCleaned$US_State)
+orderDfCleaned$Age <- as.numeric(orderDfCleaned$Age)
 ```
 
-# Summary Statistics
+## What we have done
+
+In our analysis of Ebuy's data we distiguised between different scopes of interest. You could also define these scopes as different views on the data. Namely we distinguished between the customers, the orders and the clicks. Each of these topics raises a lot of interesting questions which we tried to answer with your data as foundation. In [chapter 2](#summary-statistics) we first took a broad overview of what might be interesting in the data and raised some early hypotheses on how to improve Ebuy's business with that knowledge. We then analyzed the data in more depth and highlighted some very interesting observations in [chapter 3](#plots) which was all about visualization. For instance we looked at which states in the US generate the most traffic on your website, what the most popular brands on Ebuy are and which day of the week comes with the most orders. In [chapter 4](#ebuys-experiment) we then looked at the performance data of the three recommender systems you sent us some weeks ago. We came to the conclusion that one of the recommender systems is significantly better than the random recommender system while the other showed a very weak performance. Futhermore in [chapter 5](#models-and-predicitons) we tried to predict what a customer will buy based on some characteristics such as age and gender.
+
+# Summary Statistics {#summary-statistics}
 ## Clicks
 
 The data period contains data for 17 days. To get an overview over the clickstream data, we look at different measures in the data. The table below shows how many sessions and requests Ebuy's web site accumulated per day. The last measure is the average requests per session which makes it easier to compare the average session length between days. Apparently, the data sampling started on April 14th, 2000 in the late evening because there are only 37 requests in five sessions, while every other day generated at least 6800 requests.
@@ -167,11 +171,11 @@ clickstream_data %>%
   rename("Product ID" = Product_ID, "Views per Session" = Views_Per_Session) %>%
   kable() %>%
   kable_styling(full_width=FALSE)
-  
+
 
 ```
 
-Another perspective on the clickstream data is the customer. The question is which customers are the most regular visitors of the Ebuy web site and how long they stay on the site. The information has to be evaluated with caution, because the data only lists customers that are logged into the web site. The customer with the most requests has the customer ID 5224 with 247 requests over the data period. Also, customer 5224 has six sessions in the 17 days of data sampling, which means the customer visits the site about every third day. Within the top 10 customers, there are three customers with only one session and a high "pages per session" value. 
+Another perspective on the clickstream data is the customer. The question is which customers are the most regular visitors of the Ebuy web site and how long they stay on the site. The information has to be evaluated with caution, because the data only lists customers that are logged into the web site. The customer with the most requests has the customer ID 5224 with 247 requests over the data period. Also, customer 5224 has six sessions in the 17 days of data sampling, which means the customer visits the site about every third day. Within the top 10 customers, there are three customers with only one session and a high "pages per session" value.
 
 ```{r customerrequests, echo=FALSE}
 
@@ -195,33 +199,61 @@ It is always important to know who your customers are when conducting a business
 ```{r ageDistro, echo = FALSE}
 filtered = orderDfCleaned %>%
   na_if("?")  %>%
-  distinct(Customer_ID, .keep_all = TRUE)
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  mutate(Age = as.numeric(as.character(Age))) %>%
+  filter(!is.na(Age))
 
-summary(as.numeric(as.character(filtered$Age)))
+filtered %>% # start with data frame, and then ...
+    summarize_at(
+      .vars = c("Age"), # select variables that should be in the table
+      .funs = tibble::lst(min, max, mean, median, sd) # which summary statistics do you want?
+    )  %>%
+    gather(Statistic, Value) %>% # transpose everything, and then ...
+    kable() %>%
+    kable_styling(full_width=FALSE)
 
 ```
 
 When looking at the gender distribution in your customer base it is interesting to observe that most of your customers are women. Maybe ebuy should consider putting some marketing in place to attract more men to the platform or fully commit to only sell products for women.
 
 ```{r genderDistro, echo = FALSE}
-filtered = orderDfCleaned %>%  na_if("NULL")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.character(filtered$Gender)))
+orderDfCleaned %>%  
+  na_if("NULL")  %>%
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(Gender)) %>%
+  group_by(Gender) %>%
+  summarise(Count = n()) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
 Furthermore we was interested into how people get to know about ebuy and it turns out that most of ebuy's customers got aware of ebuy through they friends and family in the first place. It seems like ebuy is really dependent on mouth to mouth propaganda. E-mail advertisements are also working quite fine in generating new leads, whereas only a fraction of customers got interested into ebuy via print ads. Maybe ebuy should look closer into social media marketing and other types of modern marketing mechanisms if you want to get more independent from mouth to mouth propaganda which is hard to control although it is working fine for now.
 
 ```{r howDidYouHearAboutUs, echo = FALSE}
-filtered = orderDfCleaned %>%  na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.character(filtered$HowDidYouHearAboutUs)))
+orderDfCleaned %>%  
+  na_if("?")  %>%
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(HowDidYouHearAboutUs)) %>%
+  group_by(HowDidYouHearAboutUs) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  kable() %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
 We also tried to get insight about how many of your customers are parents. If the share is high maybe it makes sense to also offer products for babies and young children since parents buy the clothing for their kinds until a specific age of the children. Maybe parents will just put a new pyjama for their kid in the basket while shopping a new dress for themselve. It turns out that indeed approximatively 40% of your  customers are parents.
 
 ```{r presenceOfChildren, echo = FALSE}
-filtered = orderDfCleaned %>% na_if("?")  %>% distinct(Customer_ID, .keep_all = TRUE)
-summary(as.factor(as.logical(filtered$Presence_Of_Children)))
+orderDfCleaned %>%
+  na_if("?") %>%
+  distinct(Customer_ID, .keep_all = TRUE) %>%
+  filter(!is.na(Presence_Of_Children)) %>%
+  group_by(Presence_Of_Children) %>%
+  summarise(Count = n()) %>%
+  kable(col.names = c("Presence of Children", "Count")) %>%
+  kable_styling(full_width=FALSE)
 
 ```
 
@@ -237,14 +269,14 @@ findDistinctBrandname <- function(dataFrame, productId) {
   return(bn$BrandName)
 }
 
-topSellingProducts <- partialOrdersDf %>%
+topSellingProducts <- orderDfCleaned %>%
   select(Product_ID, BrandName) %>%
   drop_na(Product_ID) %>%
   count(Product_ID) %>%
   arrange(desc(n)) %>%
   rowwise() %>%
   mutate(
-    brandName = findDistinctBrandname(partialOrdersDf, Product_ID)
+    brandName = findDistinctBrandname(orderDfCleaned, Product_ID)
   )
 
 topSellingProducts %>%
@@ -252,7 +284,7 @@ topSellingProducts %>%
   kable(.) %>%
   kable_styling(full_width=FALSE)
 
-partialOrdersDf %>%
+orderDfCleaned %>%
   drop_na(Product_Family_ID) %>%
   count(Product_Family_ID) %>%
   arrange(desc(n)) %>%
@@ -262,13 +294,13 @@ partialOrdersDf %>%
 ```
 
 
-# Plots
+# Plots {#plots}
 ## Clicks
 ### How are the requests distributed geographically?
 
 Since all available clickstream data show requests from the US market, it is interesting to see how visitors from different US states behave on the web site. Figure \@ref(fig:heatmap) shows how many requests per US state have been recorded in the data time span. While the information of the figure is extremely useful, it has to be noted that `r format(round(100*sum(is.na(clickstream_data$US_State))/length(clickstream_data$US_State), 2), nsmall = 2)`% of the observations in the clickstream data do not include information about the state of the visitor. Still, `r sum(!is.na(clickstream_data$US_State))` entries contain the US state, making the plot meaningful.
 
-```{r heatmap, echo=FALSE, fig.cap="Heatmap of requests per US state", warning=FALSE}
+```{r heatmap, echo=FALSE, fig.cap="Heatmap of requests per US state", warning=FALSE, fig.align = 'center'}
 
 
 map_data <- clickstream_data %>%
@@ -304,7 +336,7 @@ data_requests_products <- clickstream_data %>%
 
 Another important information is which products are viewed most often. Figure \@ref(fig:requests) shows the distribution of requests per product. Although there are too many products to show the individual number of requests per product, it becomes clear that the requests are not equally distributed. The distribution has the form of a long-tail curve, meaning that a small portion of all products get a large proportion of the requests. The implications for Ebuy are that not all products can be treated equally. Ebuy should focus their marketing activities on products that are viewed more often in order to generate more profit. The most viewed product has product ID `r data_requests_products[order(data_requests_products$Request_Count, decreasing = TRUE),][1,1]` and was visited `r data_requests_products[order(data_requests_products$Request_Count, decreasing = TRUE),][2,1]` times. Compared with the IDs of the most bought products in \@ref(products_summary), it becomes apparent that the most viewed product is not the most bought one. Since it is the most viewed product, it has to be interesting for potential customers. Ebuy should investigate what keeps customers from buying that product because they are missing out on profit. Possible reasons for that could be that the price is too high and that customers can buy an equal product cheaper somewhere else, or that the presentation of the product on the web site is not appealing enough to convince visitors to buy it.
 
-```{r requests, echo = FALSE, fig.cap="Requests per product"}
+```{r requests, echo = FALSE, fig.cap="Requests per product", fig.align = 'center'}
 
 ggplot(data_requests_products) +
   geom_line(aes(x = reorder(Product_ID, desc(Request_Count)), y = Request_Count, group = 1)) +
@@ -323,7 +355,7 @@ The first observation is that generally speaking the average session duration in
 The second observation is that most visitors look at less than ten pages in a session. That shows that only a few visitors use Ebuy's web site to browse through different available products. Most visitors seem to have a clear goal when entering the site and only look at the product (and maybe a few alternative products) and then decide whether they buy that product or not. Ebuy could use improved advertisement (e.g. features like "Customers who bought this product also bought that product") to convince visitors to stay on their web site for longer and thus be more likely to buy more than one product.
 The previous finding could also indicate that there are many regular customers who always buy the same product and thus only stay on the web site for a short period of time since they know what product they want.
 
-```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics"}
+```{r sessionduration, echo=FALSE, fig.cap="Scatterplot of session characteristics", fig.align = 'center'}
   duration_data <- clickstream_data %>%
   select(Session_ID, Request_Sequence, Request_Date, Request_Date_Time, Session_First_Request_Date, Session_First_Request_Date_Time) %>%
   unite(col = "Request_Timestamp",c("Request_Date", "Request_Date_Time"), sep = " ", remove = TRUE) %>%
@@ -350,7 +382,7 @@ The previous finding could also indicate that there are many regular customers w
 We wanted to know if there is maybe a little group of customers which is responsible for large parts of the overall spendings on ebuy. If this is the case it is probably important to focus on such a group as they are generating most of your revenue. Therefore we looked at how the spendings on ebuy are distributed among the customers. The lorenz curve in figure \@ref(fig:calculateMoneySpendPerCustomer) vizualizes this distribution.
 As you can see the curve shows that the distribution of sales is not equally distributed among the customers. The curve's gini coefficient has a value of 0.46 indicating an very unequal distribution. Interestingly the upper ten percent of customers are responsible for approximately 42% of total sales. This tells us that indeed there is a  customer group which spends much more on ebuy than the remaining majority. We suggest that ebuy should look take attention on this group and foster their willingness to spend money on ebuy, maybe with exclusive offerings for royality customers.
 
-```{r calculateMoneySpendPerCustomer, echo=FALSE, fig.cap="Lorenz Curve - Customer Spendings"}
+```{r calculateMoneySpendPerCustomer, echo=FALSE, fig.cap="Lorenz Curve - Customer Spendings", fig.align = 'center'}
 money_spent_per_customer <- orderDfCleaned %>%
   group_by(Customer_ID) %>%
   summarise(Total_Spending = sum(Order_Line_Amount))
@@ -365,11 +397,23 @@ ggplot(data=lorenz_money_spent_per_customer_df) +
   geom_abline(color = "grey")
 ```
 
+In the table below we looked at who exactly are your ten most profitable customers. The customer with ID 30208 is by far your most profitable customer having spend approximately twice as much money than thesecond most profitable customer with ID 29244. Ebuy should probably reward some of it's most spending customers to keep those customers active on the platform. It is intersting to see how the average price per item depends between the different customers ranging from an minimum of 6 Euro to a maximum of 36 Euro on average per item. Ebuy could utilize this knowledge to recommend customers with an high average price per item more costly items while showing more cheaper items to those customers who have spent less per item in the past.  
+
+```{r mostSpendingCustomersTable, echo=FALSE}
+orderDfCleaned %>%
+  group_by(Customer_ID) %>%
+  summarise(Total_Spendings = sum(Order_Line_Amount), Total_Item_Count = sum(Order_Line_Quantity), Average_Price_Per_Item = Total_Spendings/Total_Item_Count) %>%
+  arrange(desc(Total_Spendings)) %>%
+  head(10) %>%
+  kable() %>%
+  kable_styling(full_width = FALSE)
+```
+
 ### How are customer spendings distributed among the different brands?
 
 We also looked into whether people are spending their money equally for all brands or if spendings are focussed on a particular group of brands. The lorenz curve in figure \@ref(fig:lorenzBrandToSales) has a gini coefficient of 0.36 indicating a quite inequal distribution of sales to the respective brands. The upper 10 percent of brands are responsible for approximately 28% of generated sales while the lower 50 percent of the brands are only responsible for 21% of sales. Maybe ebuy should consider to boost some of the very successful brands because people tend to buy more of it. Ebuy could show new customers products of one of the successful brands when they first visit the ebuy page because they will more likely buy it which will in turn increase sales. In the following we will look into which are the most successful brands for men and women.
 
-```{r lorenzBrandToSales, echo = FALSE, fig.cap="Lorenz Curve - Brand Spendings" }
+```{r lorenzBrandToSales, echo = FALSE, fig.cap="Lorenz Curve - Brand Spendings", fig.align = 'center'}
 orders_with_brand <- orderDfCleaned
 orders_with_brand$Brand = unlist(lapply(orderDfCleaned$Product_Level_2_Path, FUN = function(path){return(str_match(path, "\\/.*\\/.*\\/(.*)")[,2])}))
 
@@ -410,8 +454,8 @@ mostPopularFemaleBrands = orders %>%
   head(10)
 ```
 
-```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)"}
-ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
+```{r brandsFemale, echo=FALSE, fig.cap= "Most Popular Brands for Females (based on cumulated order amount)", fig.align = 'center'}
+ggplot(mostPopularFemaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Order Amount")
@@ -427,8 +471,8 @@ mostPopularMaleBrands = orders %>%
   head(10)
 ```
 
-```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)"}
-ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount, fill = Brand)) +
+```{r brandsMale, echo=FALSE, fig.cap="Most Popular Brands for Males (based on cumulated order amount)", fig.align = 'center'}
+ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y = Order_Amount)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   labs(x = "Brand", y = "Number of Purchases")
@@ -437,8 +481,8 @@ ggplot(mostPopularMaleBrands, mapping = aes(x = reorder(Brand, Order_Amount), y 
 ## Orders
 ### Different order volumes on different days of the week?
 Orders at ebuy's online shop might be distributed differently among the different days of the week. To examine, whether this is the case, we plotted a frequency distribution of all orders over the days of week. We first reordered the days in the canonical way (i.e. Monday, Tuesday, Wednesday, ...) and then counted and plotted the order frequencies against them (figure \@ref(fig:orderDayBarPlot1)). Clearly, the most orders are placed during the weekdays (peaking on Wednesdays), the least orders on sunday. In order to ramp up their sales on those days where sales are particulary low (Saturday, Sunday, Monday), ebuy could for instance try to hand out (digital) coupons that are only valid on the weekend, therby hopefully increasing their sales figures.
-```{r orderDayBarPlot1, echo=FALSE, fig.cap="Distribution of orders among different days of the week"}
-partialOrdersDf %>%
+```{r orderDayBarPlot1, echo=FALSE, fig.cap="Distribution of orders among different days of the week", fig.align = 'center'}
+orderDfCleaned %>%
   mutate(
     Order_Day_of_Week = factor(Order_Day_of_Week, levels=c(
       "Monday",
@@ -456,10 +500,10 @@ partialOrdersDf %>%
 ```
 
 ### What is the distribution of order amounts?
-For an online shop like ebuy it might be of interest to identify those customers that place the vast majority of all orders. In order to visualize the distribution of order amounts we computed their Lorenz curve and plotted the cummulative percentages (figure \@ref(fig:orderTotalLc)).
-```{r orderTotalLc, echo=FALSE, fig.cap="Lorenz Curve: Distribution of order amounts"}
-lc <- Lc(partialOrdersDf$Order_Amount,
-         n = rep(1, length(partialOrdersDf$Order_Amount)),
+For an online shop like ebuy it might be of interest to identify those customers that place the vast majority of all orders. In order to visualize the distribution of order amounts we computed their Lorenz curve and plotted the cummulative percentages (figure \@ref(fig:orderTotalLc)). The curve shows a highly inequal distribution of order amounts: the lower 75% of all orders only account for roughly 25% of the total order amounts, while a quarter of all orders make up for three quarters of the sales total.
+```{r orderTotalLc, echo=FALSE, fig.cap="Lorenz Curve: Distribution of order amounts", fig.align = 'center'}
+lc <- Lc(orderDfCleaned$Order_Amount,
+         n = rep(1, length(orderDfCleaned$Order_Amount)),
          plot = F)
 
 p <- lc[1]
@@ -473,8 +517,7 @@ ggplot(data = lc) +
   geom_abline()
 ```
 
-
-# Ebuy's Experiment
+# Ebuy's Experiment {#ebuys-experiment}
 ## Data and Summary Statistics
 Ebuy's experiment provided us with data regarding different recommender systems. After loading and examining the dataset we picked all columns of interest (e.g. deciding to keep the first ID column only) and recoded the chosen ID column as a factor. We than calculated basic summary statistics, where the mean values where of most interest.
 ```{r loadexpdata, echo=FALSE}
@@ -512,21 +555,21 @@ for(row in 1:nrow(experimentDf)){
 recommender_to_sales$Id <- NULL
 ```
 
-```{r rankingDensityAndMean, echo=FALSE, fig.cap="Ranking-Based Recommender - Sales Density and Mean"}
+```{r rankingDensityAndMean, echo=FALSE, fig.cap="Ranking-Based Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="ranking_based"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
   labs(x="Sales",y= "Density")
 ```
 
-```{r profitDensityAndMean, echo=FALSE, fig.cap="Profit-Oriented Recommender - Sales Density and Mean"}
+```{r profitDensityAndMean, echo=FALSE, fig.cap="Profit-Oriented Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="profit_oriented"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
   labs(x="Sales",y= "Density")
 ```
 
-```{r randomDensityAndMean, echo=FALSE, fig.cap="Random Recommender - Sales Density and Mean"}
+```{r randomDensityAndMean, echo=FALSE, fig.cap="Random Recommender - Sales Density and Mean", fig.align = 'center'}
 ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), aes(x=Sales)) +
   stat_density(geom="line") +
   geom_vline(aes(xintercept=mean(Sales)),color="black", linetype="dashed", size=1) +
@@ -535,7 +578,7 @@ ggplot(recommender_to_sales %>% filter(Recommender=="random_recommendations"), a
 
 When taking a closer look at the confidence intervals of the different recommender systems (see figure \@ref(fig:confidenceIntervalsRecommenders)) you can clearly  see that the profit-based recommender systems shows the best performance and also has a very tight 95% confidence interval indicating high certainty in the amount of profit made from the recommender per customer. On the other side the confidence intervals for the profit-based recommender and the random recommender system are more wide and also overlap each other.
 
-```{r confidenceIntervalsRecommenders, echo=FALSE, fig.cap="Recommender Confidence Intervals"}
+```{r confidenceIntervalsRecommenders, echo=FALSE, fig.cap="Recommender Confidence Intervals", fig.align = 'center'}
 result <- group_by(recommender_to_sales, Recommender) %>%
   summarise(
     Count = n(),
@@ -567,6 +610,9 @@ It turns out that all the p-values are smaller than the significance level of 0.
 
 ## Mann-Whitney U Test
 
+We first tested if there is a significant difference in the means of the random recommender system and the ranking-based recommender system. Our earlier observations of the confidence intervals of the two recommenders revealed that their confidence intervals are both quite wide and also overlap at large parts (see figure \@ref(fig:confidenceIntervalsRecommenders)). The test now proves that indeed the both means of the two recommender systems do not differ significantly (p = 0.2008 > 0.05).
+Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecommenders) already indicate that the means of the profit-based recommender is significantly different from the random recommender system we conducted a test for that to be completely sure. The result of the test proves our suggestions with an p-value less than 0.001.
+
 ```{r echo = FALSE}
 # perform wulxoc test
 ranking_based_sales <- recommender_to_sales %>% filter(Recommender == "ranking_based")
@@ -577,32 +623,32 @@ wilcox.test(ranking_based_sales$Sales, random_recommendations_sales$Sales, alter
 wilcox.test(profit_oriented_sales$Sales, random_recommendations_sales$Sales, alternative = "two.sided")
 ```
 
-We first tested if there is a significant difference in the means of the random recommender system and the ranking-based recommender system. Our earlier observations of the confidence intervals of the two recommenders revealed that their confidence intervals are both quite wide and also overlap at large parts (see figure \@ref(fig:confidenceIntervalsRecommenders)). The test now proves that in fact the both means of the two recommenders do not differ significantly (p = 0.2008 > 0.05).
-Although the confidence intervals in figure \@ref(fig:confidenceIntervalsRecommenders) already indicate that the means of the profit-based recommender is significantly different from the random recommender system we conducted a test for that. The result of the test proves our suggestions with an p-value less than 0.001.
 As the mean of the ranking-based recommender system has been shown to not differ significantly from the random recommendersystem we have to choose between the profit-oriented recommender system and the random recommender system. As the profit-oriented recommender systems mean value (21.75) is greater than the baseline mean (17.91), ebuy should preferably use the profit-oriented one.
 
-# Models and Prediction
-```{r includes02, echo=FALSE, message=FALSE}
-library(caret)
-library(rpart)
-library(rpart.plot)
-```
-
+# Models and Prediction {#models-and-predicitons}
 ## Training the Model{#subsection-ttm}
 As ebuy's products fall into certain product families, we trained a model that allows to predict for a new customer from which product family he will purchase a product. We first grew a large tree with a complexity parameter of cp=0.00001 (i.e. splits had to decrease the lack of fit by a factor of 0.00001). We then examined the results of a 10-fold cross-validation by plotting the complexity parameter vs. its cross-validated error (as shown in figure \@ref(fig:cpplottree1)).
-```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error"}
+```{r cpplottree1, echo=FALSE, fig.cap="Product Family ID: Complexity parameter vs. cross-validated error", fig.align = 'center'}
 tree <- rpart(Product_Family_ID ~ Order_Line_Day_of_Week + Gender + Age,
               method="class",
-              data=partialOrdersDf,
+              data=orderDfCleaned,
               cp=0.00001)
 
 plotcp(tree)
 ```
 
-To prevent over-fitting, @kabacoff2015 suggests to choose the leftmost cp value below the dotted line (here: cp=0.0007): a tree of that size (here: 45 splits) is the smallest tree whose cross-validated error is whithin one standard error of the minimum cross-validated error value. We therfore pruned the tree to its new size and pretty-printed the resulting tree (figure \@ref(fig:prunedtree1)).
-```{r prunedtree1, echo=FALSE, fig.cap="Product Family ID: Pruned Classification Tree"}
+To prevent over-fitting, @kabacoff2015 suggests to choose the leftmost cp value below the dotted line (here: cp=0.0007): a tree of that size (here: 45 splits) is the smallest tree whose cross-validated error is whithin one standard error of the minimum cross-validated error value. We therfore pruned the tree to its new size and pretty-printed the resulting tree (figure \@ref(fig:prunedtree1); zoomed-in partial figure \@ref(fig:tree1Zoom1)).
+```{r prunedtree1, echo=FALSE, fig.cap="Product Family ID: Pruned Classification Tree", fig.align = 'center'}
 prune(tree, cp=0.0007) %>%
-  prp(.)
+  prp(., tweak = 1.5,)
+```
+
+```{r tree1Zoom1, echo=FALSE, fig.cap="Partially Enlarged Classification Tree", fig.align = 'center'}
+# The rpart package guesses (!) the font and line/node width and height based on your operation system's
+# resolution. This might cause prp() to render an ugly plot. We've chosen a "tweak" factor of 1.5 which produces
+# a reasonably good looking graphical representaion of our tree. We also added this "zoomed-in" screenshot that
+# (as it is an image) does not change - no matter what your resolution/DPI is.
+include_graphics("images/decision-tree-zoom-01.png")
 ```
 
 Next we computed a 10-fold cross-validated linear regression model that helped us understand, how the different properties of customers affected the amount of money they would spend in total.
@@ -611,7 +657,7 @@ ctrl <- trainControl(method = "cv",
                      number = 10)
 
 linreg1 <- train(Order_Line_Amount ~ Age + Gender,
-                 data = partialOrdersDf,
+                 data = orderDfCleaned,
                  trControl = ctrl,
                  na.action  = na.pass,
                  method = "lm")
@@ -627,5 +673,7 @@ predict(tree, unseenCustomer, type="class")
 
 
 # Summary
+Ebuy's data provided a welcome opportunity to take a data scientific look at real world data. Using the techniques learnt we could examine interesting phenomena and problems from such data.
+
 
 # Literature
