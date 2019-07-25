@@ -691,11 +691,22 @@ The close up (figure \@ref(fig:tree1Zoom1)) gives a better idea of how a custome
 include_graphics("images/decision-tree-zoom-01.png")
 ```
 
-Next we computed a 10-fold cross-validated linear regression model that helped us understand, how the different properties of customers affected the amount of money they would spend in total.
+
+In order to create a linear regression model, that predicts the amount of money a customer would spend, we first computed scatterplot matrixes of different predictor variables. Most of the variables were not suitable for a linear model (see figure \@ref(fig:lmScatterMatrix1) for an example) and thus were discarded. We found (weak) visual correlations for the day of purchase, the customer's gender, and the state he or she lives in.
+```{r lmScatterMatrix1, echo=FALSE, fig.cap="Scatter plot matrix", fig.align = 'center'}
+as.data.frame(orderDfCleaned[c("Order_Line_Amount",
+                               "Order_Line_Day_of_Week",
+                               "Order_Hour_of_Day",
+                               "Age", "Gender", "US_State")]) %>%
+  scatterplotMatrix(.)
+```
+
+Next we used these variables in a 10-fold cross-validated linear regression model.
 ```{r linReg1, echo=FALSE}
 ctrl <- trainControl(method = "cv",
                      number = 10)
-linreg1 <- train(Order_Line_Amount ~ Age + Gender,
+
+linreg1 <- train(Order_Line_Amount ~ Order_Line_Day_of_Week + Gender + US_State,
                  data = orderDfCleaned,
                  trControl = ctrl,
                  na.action  = na.pass,
@@ -704,12 +715,29 @@ linreg1
 linreg1$finalModel
 ```
 
-## Predictions{#subsection-pred}
-Having trained the models in \@ref(subsection-ttm) Ebuy could predict the purchasing behaviour of future customers. Given such a previously unseen customer, Ebuy could for instance now predict the product family which she is going to purchase from.
-```{r prediction1, eval=FALSE}
-predict(tree, unseenCustomer, type="class")
-```
 
+## Predictions{#subsection-pred}
+Having trained the models in \@ref(subsection-ttm) Ebuy could predict the purchasing behaviour of future customers. Given such a previously unseen customer, Ebuy could for instance predict the product family which he is going to purchase from:
+```{r prediction1}
+# a fake order from a fake customer:
+unseenCustomer <- data.frame(Order_Line_Day_of_Week = c("Thursday"),
+                             Gender = c("Male"),
+                             Age = c(23))
+
+# predict the product family:
+predict(tree, unseenCustomer, type="class") %>%
+  kable(col.names = c("Predicted product family")) %>%
+  kable_styling(full_width=FALSE)
+```
+The predicted product family (12295) matches the one we did predict "manually" in \@ref(subsection-ttm). With the predictive power of such a decision tree Ebuy would be able to display product suggestions to its customers that will very likely match their taste.
+
+```{r prediction2}
+unseenCustomer2 <- data.frame(Order_Line_Day_of_Week = c("Thursday"),
+                             Gender = c("Male"),
+                             Age = c(23),
+                             US_State = c("CO"))
+predict(linreg1, unseenCustomer2, se.fit = TRUE)
+```
 
 # Summary
 Ebuy's data provided a welcome opportunity to take a data scientific look at real world data. Using the techniques learnt we could examine interesting phenomena and problems from such data.
